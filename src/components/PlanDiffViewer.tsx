@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TopSqlItem } from '../types/oracle';
+import { parsePlanCost, parsePlanTimeSec } from '../utils/sqlParser';
 import { Layers, TrendingDown, Clock, Database } from 'lucide-react';
 
 interface PlanDiffViewerProps {
@@ -41,6 +42,18 @@ WHERE e.deptno = d.deptno
     bufferGets: 845200
   };
 
+  // 성과 수치는 고정값이 아니라 선택된 SQL의 실행계획에서 직접 파싱해 계산한다.
+  const origCost = parsePlanCost(item.executionPlan);
+  const tunedCost = item.tunedPlan ? parsePlanCost(item.tunedPlan) : null;
+  const costReduction = origCost && tunedCost
+    ? Number((((origCost - tunedCost) / origCost) * 100).toFixed(1))
+    : null;
+  const origTime = parsePlanTimeSec(item.executionPlan);
+  const tunedTime = item.tunedPlan ? parsePlanTimeSec(item.tunedPlan) : null;
+  const timeReduction = origTime && tunedTime
+    ? Number((((origTime - tunedTime) / origTime) * 100).toFixed(1))
+    : null;
+
   return (
     <div className="diff-container">
       <div className="section-header">
@@ -60,27 +73,27 @@ WHERE e.deptno = d.deptno
         <div className="impact-card card-cost">
           <TrendingDown className="impact-icon text-cyan" />
           <div>
-            <span className="impact-title">Optimizer Cost 감소율</span>
-            <span className="impact-value text-cyan">-99.0%</span>
-            <span className="impact-sub">Cost: 1,240 ➔ 12</span>
+            <span className="impact-title">Optimizer Cost 감소율 (실행계획 파싱)</span>
+            <span className="impact-value text-cyan">{costReduction !== null ? `-${costReduction}%` : '산출 불가'}</span>
+            <span className="impact-sub">Cost: {origCost?.toLocaleString() ?? '-'} ➔ {tunedCost?.toLocaleString() ?? '-'}</span>
           </div>
         </div>
 
         <div className="impact-card card-time">
           <Clock className="impact-icon text-green" />
           <div>
-            <span className="impact-title">소요시간 (Elapsed Time)</span>
-            <span className="impact-value text-green">-96.5%</span>
-            <span className="impact-sub">28.45초 ➔ 1.00초 미만</span>
+            <span className="impact-title">소요시간 (실행계획 Time)</span>
+            <span className="impact-value text-green">{timeReduction !== null ? `-${timeReduction}%` : '산출 불가'}</span>
+            <span className="impact-sub">{origTime ?? '-'}초 ➔ {tunedTime ?? '-'}초</span>
           </div>
         </div>
 
         <div className="impact-card card-io">
           <Database className="impact-icon text-amber" />
           <div>
-            <span className="impact-title">Buffer Gets (I/O 부하)</span>
-            <span className="impact-value text-amber">-98.2%</span>
-            <span className="impact-sub">845,200 ➔ 15,100</span>
+            <span className="impact-title">Buffer Gets (튜닝 전)</span>
+            <span className="impact-value text-amber">{item.bufferGets?.toLocaleString() ?? '-'}</span>
+            <span className="impact-sub">튜닝 후 값은 실제 실행 후 실측이 필요합니다</span>
           </div>
         </div>
       </div>

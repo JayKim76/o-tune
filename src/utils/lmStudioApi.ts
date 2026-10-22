@@ -42,11 +42,12 @@ export async function checkLmStudioStatus(serverUrl: string = DEFAULT_LM_STUDIO_
 
         return {
           isOnline: true,
-          models: models.length > 0 ? models : ['qwen/qwen3.5-9b', 'deepseek-r1-distill-qwen-7b'],
+          // 서버가 반환한 모델만 표시한다. 목록이 비면 비어 있는 대로 둔다 (모델명을 지어내지 않음).
+          models,
           connectedUrl: url,
         };
       }
-    } catch (err) {
+    } catch {
       // 다음 후보 URL로 계속 시도
     }
   }
@@ -99,8 +100,9 @@ Respond ONLY in JSON format:
   for (const endpoint of Array.from(new Set(endpoints))) {
     try {
       const controller = new AbortController();
-      // 5초 타임아웃 설정 (무한 로딩 방지)
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      // 로컬 LLM 추론은 수십 초~수 분이 걸릴 수 있어 120초 타임아웃을 둔다.
+      // (기존 5초는 사실상 항상 중단되어 폴백 결과만 반환되는 문제였음)
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -115,7 +117,8 @@ Respond ONLY in JSON format:
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.1,
-          max_tokens: 1000,
+          // JSON 보고서 + 추론형 모델의 사고 과정까지 감안한 상한 (기존 1000은 응답이 잘리기 쉬웠음)
+          max_tokens: 4096,
         }),
       });
 
@@ -128,13 +131,14 @@ Respond ONLY in JSON format:
           return parseLmStudioResponse(contentText);
         }
       }
-    } catch (err) {
+    } catch {
       // 타임아웃 또는 접속 실패 시 다음 엔드포인트 시도
     }
   }
 
-  // LM Studio 모델 추론 지연/실패 시 즉시 스마트 튜닝 진단 엔진 결과 반환
-  return getMockDiagnosticResult(rawSql);
+  // LM Studio 연결/응답 실패 시 폴백 예시 결과를 반환한다.
+  // 실제 AI 결과가 아니므로 isFallback으로 반드시 구분 표기한다.
+  return getMockDiagnosticResult(rawSql, 'LM Studio 서버에 연결하지 못했거나 120초 안에 응답이 오지 않았습니다.');
 }
 
 /**
@@ -179,9 +183,11 @@ function parseLmStudioResponse(rawText: string): LmStudioDiagnosticResult {
       benefitRatioPercent: typeof parsed.benefitRatioPercent === 'number' ? parsed.benefitRatioPercent : 75,
       rawModelResponse: rawText,
     };
-  } catch (parseError) {
+  } catch {
     return {
-      summary: 'LM Studio 로컬 AI 튜닝 보고서 파싱 성공',
+      isFallback: true,
+      fallbackReason: 'LM Studio 응답을 JSON으로 파싱하지 못해 예시 결과를 표시합니다.',
+      summary: 'LM Studio 응답 파싱 실패 — 아래는 예시 결과이며 실제 AI 진단이 아닙니다.',
       antiPatterns: [
         {
           type: 'FULL_TABLE_SCAN',
@@ -196,8 +202,8 @@ function parseLmStudioResponse(rawText: string): LmStudioDiagnosticResult {
       tunedSql: extractCodeFromText(rawText) || rawText,
       originalPlanAnalysis: '로컬 AI 실행계획 분석 완료',
       tunedPlanAnalysis: '인덱스 스캔 전환으로 I/O 및 CPU 부하 대폭 감소',
-      estimatedCostReduction: 'Cost 1,240 -> Cost 12 (-99.0%)',
-      benefitRatioPercent: 99,
+      estimatedCostReduction: '예시: Cost 1,240 -> Cost 12 (실측 아님)',
+      benefitRatioPercent: 0,
       rawModelResponse: rawText,
     };
   }
@@ -211,9 +217,11 @@ function extractCodeFromText(text: string): string | null {
   return null;
 }
 
-function getMockDiagnosticResult(rawSql: string): LmStudioDiagnosticResult {
+function getMockDiagnosticResult(rawSql: string, reason: string): LmStudioDiagnosticResult {
   return {
-    summary: 'LM Studio 로컬 AI 진단 모드 (Local AI Emulator): EMP 테이블의 FULL SCAN 및 HASH JOIN 병목이 감지되었습니다.',
+    isFallback: true,
+    fallbackReason: reason,
+    summary: `LM Studio 응답 없음 — 아래는 폴백 예시 결과이며 실제 AI 진단이 아닙니다. (${reason}) 예시 내용: EMP 테이블의 FULL SCAN 및 HASH JOIN 병목이 감지되었습니다.`,
     antiPatterns: [
       {
         type: 'FULL_TABLE_SCAN',
@@ -239,11 +247,11 @@ function getMockDiagnosticResult(rawSql: string): LmStudioDiagnosticResult {
     tunedSql: rawSql.includes('/*+') 
       ? rawSql 
       : `SELECT /*+ INDEX(e idx_emp_job_sal) LEADING(e d) USE_NL(d) */ e.empno, e.ename, d.dname, e.sal\nFROM emp e, dept d\nWHERE e.deptno = d.deptno\n  AND e.job = :b1\n  AND e.sal > :b2`,
-    originalPlanAnalysis: 'TABLE ACCESS FULL EMP (Cost: 1,120) + HASH JOIN (Cost: 1,240)',
-    tunedPlanAnalysis: 'INDEX RANGE SCAN IDX_EMP_JOB_SAL (Cost: 2) + NESTED LOOPS JOIN (Cost: 12)',
-    estimatedCostReduction: 'Cost 1,240 -> Cost 12 (-99.0%)',
-    benefitRatioPercent: 99,
-    rawModelResponse: 'Mock Local AI Diagnostic Result',
+    originalPlanAnalysis: '예시: TABLE ACCESS FULL EMP (Cost: 1,120) + HASH JOIN (Cost: 1,240)',
+    tunedPlanAnalysis: '예시: INDEX RANGE SCAN IDX_EMP_JOB_SAL (Cost: 2) + NESTED LOOPS JOIN (Cost: 12)',
+    estimatedCostReduction: '예시: Cost 1,240 -> Cost 12 (실측 아님)',
+    benefitRatioPercent: 0,
+    rawModelResponse: 'Mock Local AI Diagnostic Result (fallback)',
   };
 }
 

@@ -1,32 +1,29 @@
-# React + TypeScript + Vite
+# 오튠 (o-tune / ORCL-Tune)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+LM Studio 로컬 AI와 규칙 기반 진단 엔진을 활용한 Oracle SQL 튜닝 웹 솔루션입니다.
+React + TypeScript + Vite로 구성되어 있습니다.
 
-Currently, two official plugins are available:
+## 실행
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev   # http://localhost:5173/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Windows에서는 `run_orcl_tune_and_lmstudio.bat` 또는 `start_solution.ps1`로
+LM Studio와 함께 원클릭 실행할 수 있습니다.
+
+## 구성
+
+- **Top SQL 대시보드** — 고부하 SQL 목록 (현재 목업 데이터, `src/data/mockOracleData.ts`)
+- **SQL 진단** — 규칙 엔진(`src/utils/sqlParser.ts`: SQL 정규화·안티패턴 탐지·힌트 병합)과
+  LM Studio 로컬 AI(`src/utils/lmStudioApi.ts`, OpenAI 호환 API `http://localhost:1234`) 진단
+- **Plan Diff** — 선택한 SQL의 실행계획에서 Cost·Time을 직접 파싱해 튜닝 전/후 비교
+- **학습 루프 / 튜닝 툴킷** — 튜닝 방법론 설명과 실무 진단 쿼리 모음
+
+## 현재 상태 (중요)
+
+- Oracle DB 실연동 백엔드는 아직 없습니다. DB 연결 설정은 화면 표기용이며, 연결 테스트는 수행되지 않습니다.
+- LM Studio에 연결하지 못하면 폴백 **예시** 결과가 표시됩니다. 화면 상단 경고 배너로 구분되며,
+  실제 AI 진단이 아니므로 튜닝 판단에 사용하면 안 됩니다.
+- 규칙 엔진의 튜닝 후 수치는 실행계획 Time 기반 **추정**이며 실측이 아닙니다.

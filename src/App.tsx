@@ -23,8 +23,9 @@ export function App() {
     serviceName: 'ORCL',
     username: 'SYSTEM',
     useDrcp: true,
-    status: 'CONNECTED',
-    lastConnectedAt: '15:00:00'
+    // 실제 DB 연결 기능이 없으므로 연결된 것처럼 표시하지 않는다.
+    status: 'DISCONNECTED',
+    lastConnectedAt: undefined
   });
 
   const [lmConfig, setLmConfig] = useState<LmStudioConfig>({
@@ -59,7 +60,7 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [lmConfig.serverUrl]);
 
   const handleSelectSql = (sql: TopSqlItem) => {
     setSelectedSqlItem(sql);

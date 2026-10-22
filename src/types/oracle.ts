@@ -63,7 +63,7 @@ export interface DiagnosticOutput {
   tunedSql: string;
   originalDbTimeSec: number;
   estimatedTunedDbTimeSec: number;
-  benefitRatioPercent: number; // 스냅샷 기간 Total DB Time 절감 비중
+  benefitRatioPercent: number; // 이 쿼리 자체의 예상 개선율 (스냅샷 전체 DB Time 비중은 AWR 데이터 필요)
 }
 
 export interface OracleTuningQueryItem {
@@ -102,6 +102,9 @@ export interface LmStudioDiagnosticResult {
   estimatedCostReduction: string;
   benefitRatioPercent: number;
   rawModelResponse?: string;
+  /** true면 LM Studio 실제 응답이 아니라 폴백(예시) 결과다. 화면에서 반드시 구분 표기할 것. */
+  isFallback?: boolean;
+  fallbackReason?: string;
 }
 
 

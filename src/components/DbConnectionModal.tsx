@@ -26,16 +26,17 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
     setTestResult(null);
     setTimeout(() => {
       setTesting(false);
-      setTestResult('오라클 데이터베이스 연결에 성공하였습니다. (Response Latency: 4.2ms)');
-    }, 1200);
+      // 브라우저에서는 Oracle에 직접 접속할 수 없다. 성공으로 가장하지 않고 한계를 그대로 알린다.
+      setTestResult('실제 연결 테스트는 수행되지 않았습니다. 브라우저에서 Oracle DB로 직접 연결할 수 없으며, 실연동에는 백엔드 또는 로컬 에이전트가 필요합니다. 입력값은 화면 표기용으로만 저장됩니다.');
+    }, 600);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveConfig({
       ...formData,
-      status: 'CONNECTED',
-      lastConnectedAt: new Date().toLocaleTimeString()
+      status: 'DISCONNECTED',
+      lastConnectedAt: undefined
     });
     onClose();
   };
@@ -62,7 +63,7 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
 
         <form onSubmit={handleSave} className="modal-body">
           <p className="modal-subtitle">
-            오라클 DB (`v$sqlstats`, `DBMS_XPLAN`)와 라이브 연동하기 위한 커넥션 파라미터를 지정합니다.
+            오라클 DB 커넥션 파라미터를 지정합니다. 현재 버전은 실연동 백엔드가 없어, 설정값은 화면 표기용으로만 쓰입니다.
           </p>
 
           <div className="form-grid">
@@ -155,7 +156,7 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
 
           {/* 연결 테스트 결과 */}
           {testResult && (
-            <div className="test-result-box text-green">
+            <div className="test-result-box">
               <CheckCircle2 className="icon" />
               <span>{testResult}</span>
             </div>

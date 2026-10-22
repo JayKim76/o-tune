@@ -188,13 +188,23 @@ WHERE e.deptno = d.deptno
       {/* 1) LM Studio 로컬 AI 튜닝 결과 리포트 */}
       {activeEngine === 'LM_STUDIO' && lmResult && !isLmAnalyzing && (
         <div className="results-container animate-fade-in">
+          {lmResult.isFallback && (
+            <div className="status-banner error animate-fade-in">
+              <AlertTriangle className="icon text-red" />
+              <span>LM Studio 폴백 예시 결과입니다. {lmResult.fallbackReason || ''} 실제 AI 진단이 아니므로 튜닝 판단에 사용하지 마세요.</span>
+            </div>
+          )}
           <div className="results-header lm-header">
             <h3 className="results-title">
               <Bot className="icon text-amber" />
-              <span>LM Studio 로컬 AI 심층 튜닝 보고서 ({lmConfig.activeModel || 'Local AI'})</span>
+              <span>{lmResult.isFallback ? 'LM Studio 폴백 예시 결과' : `LM Studio 로컬 AI 심층 튜닝 보고서 (${lmConfig.activeModel || 'Local AI'})`}</span>
             </h3>
             <div className="benefit-badge highlight-gold">
-              <span>예상 Total DB Time 절감 비중: <strong>+{lmResult.benefitRatioPercent}%</strong></span>
+              {lmResult.isFallback ? (
+                <span>실제 진단 아님 (예시)</span>
+              ) : (
+                <span>예상 개선율 (AI 추정): <strong>{lmResult.benefitRatioPercent}%</strong></span>
+              )}
             </div>
           </div>
 
@@ -305,7 +315,7 @@ WHERE e.deptno = d.deptno
               <span>AI Rule Engine 진단 및 튜닝 추천 리포트</span>
             </h3>
             <div className="benefit-badge">
-              <span>스냅샷 Total DB Time 절감 비중: <strong>+{diagnosticResult.benefitRatioPercent}%</strong></span>
+              <span>이 쿼리 예상 개선율 (실행계획 Time 기준 추정): <strong>{diagnosticResult.benefitRatioPercent}%</strong></span>
             </div>
           </div>
 
@@ -396,17 +406,17 @@ WHERE e.deptno = d.deptno
 
             <div className="metric-compare-bar">
               <div className="compare-item">
-                <span className="cmp-label">튜닝 전 예상 소요시간</span>
-                <span className="cmp-val text-red">{diagnosticResult.originalDbTimeSec} 초</span>
+                <span className="cmp-label">튜닝 전 소요시간 (실행계획 Time)</span>
+                <span className="cmp-val text-red">{diagnosticResult.originalDbTimeSec > 0 ? `${diagnosticResult.originalDbTimeSec} 초` : '산출 불가'}</span>
               </div>
               <ArrowRight className="cmp-arrow" />
               <div className="compare-item">
-                <span className="cmp-label">튜닝 후 예상 소요시간</span>
-                <span className="cmp-val text-green">{diagnosticResult.estimatedTunedDbTimeSec} 초</span>
+                <span className="cmp-label">튜닝 후 예상 소요시간 (추정, 실측 아님)</span>
+                <span className="cmp-val text-green">{diagnosticResult.originalDbTimeSec > 0 ? `${diagnosticResult.estimatedTunedDbTimeSec} 초` : '산출 불가'}</span>
               </div>
               <div className="compare-item highlight-item">
                 <span className="cmp-label">속도 향상율 (Performance Gain)</span>
-                <span className="cmp-val text-cyan">약 {(diagnosticResult.originalDbTimeSec / diagnosticResult.estimatedTunedDbTimeSec).toFixed(1)} 배 단축</span>
+                <span className="cmp-val text-cyan">{diagnosticResult.estimatedTunedDbTimeSec > 0 ? `약 ${(diagnosticResult.originalDbTimeSec / diagnosticResult.estimatedTunedDbTimeSec).toFixed(1)} 배 단축 (추정)` : '산출 불가'}</span>
               </div>
             </div>
           </div>
