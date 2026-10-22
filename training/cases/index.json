@@ -1,0 +1,705 @@
+{
+  "count": 100,
+  "cases": [
+    {
+      "case_id": "case-0001",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0002",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0003",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0004",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0005",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0006",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0007",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0008",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0009",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0010",
+      "pattern": "hr_fullscan_literal",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0011",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0012",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0013",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0014",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0015",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0016",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0017",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0018",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0019",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0020",
+      "pattern": "sales_nl_misuse",
+      "family": "SALES",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0021",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0022",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0023",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0024",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0025",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0026",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0027",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0028",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0029",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0030",
+      "pattern": "retail_cardinality_skew",
+      "family": "RETAIL",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0031",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0032",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0033",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0034",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0035",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0036",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0037",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0038",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0039",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0040",
+      "pattern": "fin_fullscan_date",
+      "family": "FINANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0041",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0042",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0043",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0044",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0045",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0046",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0047",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0048",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0049",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0050",
+      "pattern": "logi_join_order",
+      "family": "LOGISTICS",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0051",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0052",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0053",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0054",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0055",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0056",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0057",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0058",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0059",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0060",
+      "pattern": "hr_parsing_inlist",
+      "family": "HR",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0061",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0062",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0063",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0064",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0065",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0066",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0067",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0068",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0069",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0070",
+      "pattern": "inv_composite_index",
+      "family": "INVENTORY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0071",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0072",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0073",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0074",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0075",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0076",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0077",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0078",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0079",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0080",
+      "pattern": "commerce_cartesian",
+      "family": "COMMERCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0081",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0082",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0083",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0084",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0085",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0086",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0087",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0088",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0089",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0090",
+      "pattern": "insurance_nl_batch",
+      "family": "INSURANCE",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0091",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0092",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0093",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0094",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0095",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0096",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0097",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0098",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0099",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    },
+    {
+      "case_id": "case-0100",
+      "pattern": "hotel_groupby_scan",
+      "family": "HOSPITALITY",
+      "metrics_basis": "estimated",
+      "verdict": "pending"
+    }
+  ]
+}

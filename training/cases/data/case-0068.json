@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0068",
+  "source": "synthetic",
+  "pattern": "inv_composite_index",
+  "family": "INVENTORY",
+  "schema_ddl": "CREATE TABLE inventory (warehouse_id NUMBER, product_id NUMBER, qty_on_hand NUMBER, PRIMARY KEY (warehouse_id, product_id));\nCREATE TABLE warehouses (warehouse_id NUMBER PRIMARY KEY, warehouse_name VARCHAR2(60));",
+  "stats_snapshot_id": "snap-inv_composite_index",
+  "original_sql": "SELECT i.qty_on_hand, w.warehouse_name\nFROM inventory i, warehouses w\nWHERE i.warehouse_id = w.warehouse_id\n  AND i.warehouse_id = 107\n  AND i.product_id = 5259",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             |     1 |    40 | 4865 (2)| 00:01:50  |\n|   1 |  NESTED LOOPS              |             |     1 |    40 | 4865 (2)| 00:01:50  |\n|  *2 |   TABLE ACCESS FULL        | INVENTORY   |900000 |18000000| 4719 (2)| 00:01:50  |\n|  *3 |   TABLE ACCESS BY INDEX ROWID| WAREHOUSES|     1 |    20 |     1 (0)| 00:00:01  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 110.27,
+    "buffer_gets": 3113536,
+    "disk_reads": 124541,
+    "executions": 1787,
+    "cost": 4865
+  },
+  "gold_tuned_sql": "SELECT /*+ INDEX(i SYS_C_INDEX) */ i.qty_on_hand, w.warehouse_name\nFROM inventory i, warehouses w\nWHERE i.warehouse_id = w.warehouse_id\n  AND i.warehouse_id = :b1\n  AND i.product_id = :b2",
+  "gold_metrics": {
+    "elapsed_sec": 6.62,
+    "buffer_gets": 124541,
+    "disk_reads": 2491,
+    "executions": 1787,
+    "cost": 146
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "FULL_TABLE_SCAN"
+    ],
+    "recommended_hints": [
+      "/*+ INDEX(i SYS_C_INDEX) */"
+    ],
+    "risk_notes": "힌트의 인덱스명은 환경마다 달라 실제 인덱스명으로 교체해 적용해야 한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

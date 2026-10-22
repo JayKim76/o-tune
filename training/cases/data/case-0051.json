@@ -1,0 +1,39 @@
+{
+  "case_id": "case-0051",
+  "source": "synthetic",
+  "pattern": "hr_parsing_inlist",
+  "family": "HR",
+  "schema_ddl": "CREATE TABLE employees (employee_id NUMBER PRIMARY KEY, first_name VARCHAR2(50), job_id VARCHAR2(20), salary NUMBER, department_id NUMBER);\nCREATE INDEX idx_emp_dept ON employees(department_id);",
+  "stats_snapshot_id": "snap-hr_parsing_inlist",
+  "original_sql": "SELECT employee_id, first_name, salary\nFROM employees\nWHERE job_id IN ('IT_PROG', 'SA_REP', 'ST_CLERK')\n  AND department_id IN (10, 20, 30)\n  AND salary > 2500",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             |   320 | 12800 | 159 (1)| 00:00:03  |\n|  *1 |  TABLE ACCESS BY INDEX ROWID| EMPLOYEES  |   320 | 12800 | 159 (1)| 00:00:03  |\n|  *2 |   INDEX RANGE SCAN         | IDX_EMP_DEPT|   900 |       |    12 (0)| 00:00:01  |\n| Note: 액세스 경로는 정상이나 리터럴 조합마다 하드 파싱이 반복되는 케이스 |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 3.13,
+    "buffer_gets": 101546,
+    "disk_reads": 4062,
+    "executions": 3897,
+    "cost": 159
+  },
+  "gold_tuned_sql": "SELECT employee_id, first_name, salary\nFROM employees\nWHERE job_id IN (:b1, :b2, :b3)\n  AND department_id IN (:b4, :b5, :b6)\n  AND salary > :b7",
+  "gold_metrics": {
+    "elapsed_sec": 2.57,
+    "buffer_gets": 98500,
+    "disk_reads": 1970,
+    "executions": 3897,
+    "cost": 159
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "PARSING_OVERHEAD"
+    ],
+    "recommended_hints": [],
+    "risk_notes": "바인드 변수화 시 실행계획 공유로 피킹(peeking) 영향이 생길 수 있어 바인드 민감도를 확인한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

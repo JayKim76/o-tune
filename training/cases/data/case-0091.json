@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0091",
+  "source": "synthetic",
+  "pattern": "hotel_groupby_scan",
+  "family": "HOSPITALITY",
+  "schema_ddl": "CREATE TABLE reservations (reservation_id NUMBER PRIMARY KEY, hotel_id NUMBER, checkin_date DATE, amount NUMBER, status VARCHAR2(20));\nCREATE TABLE hotels (hotel_id NUMBER PRIMARY KEY, hotel_name VARCHAR2(80), city VARCHAR2(40));\nCREATE INDEX idx_res_hotel_date ON reservations(hotel_id, checkin_date);",
+  "stats_snapshot_id": "snap-hotel_groupby_scan",
+  "original_sql": "SELECT h.hotel_name, COUNT(*) AS cnt, SUM(r.amount) AS total\nFROM reservations r, hotels h\nWHERE r.hotel_id = h.hotel_id\n  AND r.checkin_date >= TO_DATE('2024-01-01', 'YYYY-MM-DD')\n  AND r.status = 'CONFIRMED'\nGROUP BY h.hotel_name",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             |   120 |  6000 | 723 (3)| 00:00:15  |\n|   1 |  HASH GROUP BY             |             |   120 |  6000 | 651 (3)| 00:00:14  |\n|  *2 |   HASH JOIN                |             |200000 |8000000| 615 (3)| 00:00:13  |\n|  *3 |    TABLE ACCESS FULL       | RESERVATIONS|600000 |18000000| 506 (3)| 00:00:11  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 15.43,
+    "buffer_gets": 462922,
+    "disk_reads": 18517,
+    "executions": 1797,
+    "cost": 723
+  },
+  "gold_tuned_sql": "SELECT /*+ INDEX(r idx_res_hotel_date) */ h.hotel_name, COUNT(*) AS cnt, SUM(r.amount) AS total\nFROM reservations r, hotels h\nWHERE r.hotel_id = h.hotel_id\n  AND r.checkin_date >= :b1\n  AND r.status = :b2\nGROUP BY h.hotel_name",
+  "gold_metrics": {
+    "elapsed_sec": 3.39,
+    "buffer_gets": 83326,
+    "disk_reads": 1667,
+    "executions": 1797,
+    "cost": 108
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "FULL_TABLE_SCAN"
+    ],
+    "recommended_hints": [
+      "/*+ INDEX(r idx_res_hotel_date) */"
+    ],
+    "risk_notes": "집계 쿼리는 인덱스 경유가 항상 유리하지 않아 기간 범위별 검증이 필요하다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

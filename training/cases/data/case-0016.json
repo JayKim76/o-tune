@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0016",
+  "source": "synthetic",
+  "pattern": "sales_nl_misuse",
+  "family": "SALES",
+  "schema_ddl": "CREATE TABLE orders (order_id NUMBER PRIMARY KEY, customer_id NUMBER, order_date DATE, total_amount NUMBER);\nCREATE TABLE customers (customer_id NUMBER PRIMARY KEY, customer_name VARCHAR2(80), region VARCHAR2(30));\nCREATE INDEX idx_orders_cust ON orders(customer_id);",
+  "stats_snapshot_id": "snap-sales_nl_misuse",
+  "original_sql": "SELECT o.order_id, c.customer_name, o.total_amount\nFROM orders o JOIN customers c ON o.customer_id = c.customer_id\nWHERE o.order_date >= TO_DATE('2026-01-01', 'YYYY-MM-DD')\n  AND c.region = 'SEOUL'",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             | 85000 |3400000| 2648 (3)| 00:00:56  |\n|   1 |  NESTED LOOPS              |             | 85000 |3400000| 2648 (3)| 00:00:56  |\n|  *2 |   TABLE ACCESS FULL        | ORDERS      |120000 |2400000| 1854 (3)| 00:00:39  |\n|  *3 |   TABLE ACCESS BY INDEX ROWID| CUSTOMERS |     1 |    20 |     2 (0)| 00:00:01  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 56.24,
+    "buffer_gets": 1694739,
+    "disk_reads": 67790,
+    "executions": 3795,
+    "cost": 2648
+  },
+  "gold_tuned_sql": "SELECT /*+ LEADING(c o) USE_HASH(o) */ o.order_id, c.customer_name, o.total_amount\nFROM orders o JOIN customers c ON o.customer_id = c.customer_id\nWHERE o.order_date >= :b1\n  AND c.region = :b2",
+  "gold_metrics": {
+    "elapsed_sec": 8.44,
+    "buffer_gets": 203369,
+    "disk_reads": 4067,
+    "executions": 3795,
+    "cost": 212
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "NL_JOIN_OVERUSE"
+    ],
+    "recommended_hints": [
+      "/*+ LEADING(c o) USE_HASH(o) */"
+    ],
+    "risk_notes": "해시 조인은 PGA 사용량이 늘 수 있어 동시 실행 수와 PGA 여유를 확인해야 한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

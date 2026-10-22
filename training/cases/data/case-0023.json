@@ -1,0 +1,42 @@
+{
+  "case_id": "case-0023",
+  "source": "synthetic",
+  "pattern": "retail_cardinality_skew",
+  "family": "RETAIL",
+  "schema_ddl": "CREATE TABLE products (product_id NUMBER PRIMARY KEY, product_name VARCHAR2(100), category_code VARCHAR2(20));\nCREATE TABLE sales_fact (product_id NUMBER, sale_qty NUMBER, sale_date DATE);",
+  "stats_snapshot_id": "snap-retail_cardinality_skew",
+  "original_sql": "SELECT p.product_id, p.product_name, s.sale_qty\nFROM products p, sales_fact s\nWHERE p.product_id = s.product_id\n  AND p.category_code = 'CAT_12'\n  AND s.sale_date = TRUNC(SYSDATE)",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             |    10 |   400 | 936 (2)| 00:00:21  |\n|   1 |  NESTED LOOPS              |             |    10 |   400 | 936 (2)| 00:00:21  |\n|  *2 |   TABLE ACCESS FULL        | PRODUCTS    |    10 |   200 |    50 (0)| 00:00:01  |\n|  *3 |   TABLE ACCESS FULL        | SALES_FACT  |     1 |    20 | 889 (2)| 00:00:21  |\n| Note: E-Rows(10)와 실제 A-Rows(45000)의 괴리가 큰 스큐 케이스 |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 21.35,
+    "buffer_gets": 598769,
+    "disk_reads": 23951,
+    "executions": 282,
+    "cost": 936
+  },
+  "gold_tuned_sql": "SELECT /*+ OPT_ESTIMATE(TABLE s ROWS=45000) LEADING(s p) USE_HASH(p) */ p.product_id, p.product_name, s.sale_qty\nFROM products p, sales_fact s\nWHERE p.product_id = s.product_id\n  AND p.category_code = :b1\n  AND s.sale_date = :b2",
+  "gold_metrics": {
+    "elapsed_sec": 4.27,
+    "buffer_gets": 89815,
+    "disk_reads": 1796,
+    "executions": 282,
+    "cost": 112
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "CARDINALITY_MISMATCH"
+    ],
+    "recommended_hints": [
+      "/*+ OPT_ESTIMATE(TABLE s ROWS=45000) */",
+      "/*+ USE_HASH(p) */"
+    ],
+    "risk_notes": "OPT_ESTIMATE 보정값은 데이터 분포가 바뀌면 어긋날 수 있어 통계 수집 주기와 함께 관리해야 한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

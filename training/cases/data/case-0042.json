@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0042",
+  "source": "synthetic",
+  "pattern": "logi_join_order",
+  "family": "LOGISTICS",
+  "schema_ddl": "CREATE TABLE shipments (shipment_id NUMBER PRIMARY KEY, carrier_id NUMBER, ship_date DATE, weight NUMBER);\nCREATE TABLE carriers (carrier_id NUMBER PRIMARY KEY, carrier_name VARCHAR2(60), ship_mode VARCHAR2(10));\nCREATE INDEX idx_ship_carrier ON shipments(carrier_id);",
+  "stats_snapshot_id": "snap-logi_join_order",
+  "original_sql": "SELECT s.shipment_id, c.carrier_name, s.weight\nFROM shipments s, carriers c\nWHERE s.carrier_id = c.carrier_id\n  AND c.ship_mode = 'SEA'",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             | 60000 |1800000| 633 (2)| 00:00:13  |\n|   1 |  HASH JOIN                 |             | 60000 |1800000| 633 (2)| 00:00:13  |\n|   2 |   TABLE ACCESS FULL        | SHIPMENTS   |300000 |6000000| 506 (2)| 00:00:10  |\n|  *3 |   TABLE ACCESS FULL        | CARRIERS    |    12 |   240 |     3 (0)| 00:00:01  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 12.6,
+    "buffer_gets": 404983,
+    "disk_reads": 16199,
+    "executions": 4460,
+    "cost": 633
+  },
+  "gold_tuned_sql": "SELECT /*+ LEADING(c s) USE_NL(s) */ s.shipment_id, c.carrier_name, s.weight\nFROM shipments s, carriers c\nWHERE s.carrier_id = c.carrier_id\n  AND c.ship_mode = :b1",
+  "gold_metrics": {
+    "elapsed_sec": 3.15,
+    "buffer_gets": 80997,
+    "disk_reads": 1620,
+    "executions": 4460,
+    "cost": 114
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "JOIN_ORDER_ERROR"
+    ],
+    "recommended_hints": [
+      "/*+ LEADING(c s) USE_NL(s) */"
+    ],
+    "risk_notes": "작은 테이블 드라이빙은 해당 테이블의 선택도가 유지될 때만 유효하다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "case-0031",
+  "source": "synthetic",
+  "pattern": "fin_fullscan_date",
+  "family": "FINANCE",
+  "schema_ddl": "CREATE TABLE transactions (txn_id NUMBER PRIMARY KEY, account_id NUMBER, txn_date DATE, amount NUMBER, status VARCHAR2(20));\nCREATE TABLE accounts (account_id NUMBER PRIMARY KEY, owner_name VARCHAR2(80));\nCREATE INDEX idx_txn_date ON transactions(txn_date);",
+  "stats_snapshot_id": "snap-fin_fullscan_date",
+  "original_sql": "SELECT t.txn_id, a.owner_name, t.amount\nFROM transactions t, accounts a\nWHERE t.account_id = a.account_id\n  AND t.txn_date >= TO_DATE('2026-01-01', 'YYYY-MM-DD')\n  AND t.status = 'DONE'",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             | 32000 |1280000| 1155 (2)| 00:00:26  |\n|  *1 |  HASH JOIN                 |             | 32000 |1280000| 1155 (2)| 00:00:26  |\n|  *2 |   TABLE ACCESS FULL        | TRANSACTIONS|540000 |10800000| 1063 (2)| 00:00:24  |\n|   3 |   TABLE ACCESS FULL        | ACCOUNTS    |  9000 | 180000 |    40 (0)| 00:00:02  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 26.48,
+    "buffer_gets": 739208,
+    "disk_reads": 29568,
+    "executions": 4625,
+    "cost": 1155
+  },
+  "gold_tuned_sql": "SELECT /*+ INDEX(t idx_txn_date) */ t.txn_id, a.owner_name, t.amount\nFROM transactions t, accounts a\nWHERE t.account_id = a.account_id\n  AND t.txn_date >= :b1\n  AND t.status = :b2",
+  "gold_metrics": {
+    "elapsed_sec": 2.12,
+    "buffer_gets": 36960,
+    "disk_reads": 739,
+    "executions": 4625,
+    "cost": 46
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "FULL_TABLE_SCAN",
+      "PARSING_OVERHEAD"
+    ],
+    "recommended_hints": [
+      "/*+ INDEX(t idx_txn_date) */"
+    ],
+    "risk_notes": "날짜 범위 선택도가 낮은 구간에서는 인덱스보다 풀스캔이 나을 수 있어 구간별 검증이 필요하다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

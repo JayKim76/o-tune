@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0090",
+  "source": "synthetic",
+  "pattern": "insurance_nl_batch",
+  "family": "INSURANCE",
+  "schema_ddl": "CREATE TABLE claims (claim_id NUMBER PRIMARY KEY, member_id NUMBER, claim_type VARCHAR2(20), claim_amount NUMBER, claim_date DATE);\nCREATE TABLE members (member_id NUMBER PRIMARY KEY, member_name VARCHAR2(80), grade VARCHAR2(10));\nCREATE INDEX idx_claims_member ON claims(member_id);",
+  "stats_snapshot_id": "snap-insurance_nl_batch",
+  "original_sql": "SELECT c.claim_id, m.member_name, c.claim_amount\nFROM claims c, members m\nWHERE c.member_id = m.member_id\n  AND c.claim_type = 'FIRE'\n  AND c.claim_date >= SYSDATE - 180",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             | 45000 |1800000| 7537 (3)| 00:02:28  |\n|   1 |  NESTED LOOPS              |             | 45000 |1800000| 7537 (3)| 00:02:28  |\n|  *2 |   TABLE ACCESS FULL        | CLAIMS      |400000 |12000000| 5653 (3)| 00:01:51  |\n|  *3 |   TABLE ACCESS BY INDEX ROWID| MEMBERS   |     1 |    30 |     2 (0)| 00:00:01  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 147.84,
+    "buffer_gets": 4823456,
+    "disk_reads": 192938,
+    "executions": 3289,
+    "cost": 7537
+  },
+  "gold_tuned_sql": "SELECT /*+ LEADING(m c) USE_HASH(c) */ c.claim_id, m.member_name, c.claim_amount\nFROM claims c, members m\nWHERE c.member_id = m.member_id\n  AND c.claim_type = :b1\n  AND c.claim_date >= :b2",
+  "gold_metrics": {
+    "elapsed_sec": 17.74,
+    "buffer_gets": 482346,
+    "disk_reads": 9647,
+    "executions": 3289,
+    "cost": 678
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "NL_JOIN_OVERUSE"
+    ],
+    "recommended_hints": [
+      "/*+ LEADING(m c) USE_HASH(c) */"
+    ],
+    "risk_notes": "배치성 조회는 해시 조인이 유리하지만 피크 시간대 PGA 경합을 확인해야 한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case_id": "case-0077",
+  "source": "synthetic",
+  "pattern": "commerce_cartesian",
+  "family": "COMMERCE",
+  "schema_ddl": "CREATE TABLE order_items (order_id NUMBER, product_id NUMBER, qty NUMBER, price NUMBER);\nCREATE TABLE products (product_id NUMBER PRIMARY KEY, product_name VARCHAR2(100), price NUMBER);",
+  "stats_snapshot_id": "snap-commerce_cartesian",
+  "original_sql": "SELECT oi.order_id, p.product_name, oi.qty\nFROM order_items oi, products p\nWHERE oi.price > 16000",
+  "original_plan": "-------------------------------------------------------------------------------------------------\n| Id  | Operation                  | Name        | Rows  | Bytes | Cost (%CPU)| Time     |\n-------------------------------------------------------------------------------------------------\n|   0 | SELECT STATEMENT           |             |2400000|72000000| 4682 (4)| 00:01:46  |\n|   1 |  MERGE JOIN CARTESIAN      |             |2400000|72000000| 4682 (4)| 00:01:46  |\n|  *2 |   TABLE ACCESS FULL        | ORDER_ITEMS | 80000 |1600000| 1873 (2)| 00:00:43  |\n|   3 |   BUFFER SORT              |             |   300 |  9000 | 2341 (2)| 00:00:53  |\n-------------------------------------------------------------------------------------------------",
+  "original_metrics": {
+    "elapsed_sec": 106.29,
+    "buffer_gets": 2996404,
+    "disk_reads": 119856,
+    "executions": 4917,
+    "cost": 4682
+  },
+  "gold_tuned_sql": "SELECT /*+ USE_HASH(p) */ oi.order_id, p.product_name, oi.qty\nFROM order_items oi, products p\nWHERE oi.product_id = p.product_id\n  AND oi.price > :b1",
+  "gold_metrics": {
+    "elapsed_sec": 10.63,
+    "buffer_gets": 239712,
+    "disk_reads": 4794,
+    "executions": 4917,
+    "cost": 281
+  },
+  "diagnosis": {
+    "anti_patterns": [
+      "JOIN_ORDER_ERROR"
+    ],
+    "recommended_hints": [
+      "/*+ USE_HASH(p) */"
+    ],
+    "risk_notes": "조인 조건 누락 수정은 결과 집합 자체를 바꾸므로 업무 검증(건수 대조)이 반드시 선행돼야 한다."
+  },
+  "metrics_basis": "estimated",
+  "orig_result_hash": null,
+  "review": {
+    "reviewer": "generator",
+    "verdict": "pending",
+    "reviewed_at": null
+  }
+}
