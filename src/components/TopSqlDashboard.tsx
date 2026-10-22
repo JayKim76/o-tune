@@ -1,16 +1,58 @@
 import React from 'react';
-import type { TopSqlItem } from '../types/oracle';
-import { Activity, Clock, Database, AlertTriangle, ArrowRight, Zap, Cpu, HardDrive, Sparkles, ChevronRight } from 'lucide-react';
+import type { DashboardMetrics, TopSqlItem } from '../types/oracle';
+import { Activity, Clock, Database, AlertTriangle, ArrowRight, Zap, HardDrive, Sparkles, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface TopSqlDashboardProps {
   sqlList: TopSqlItem[];
   onSelectSql: (sql: TopSqlItem) => void;
+  dataSource: 'SAMPLE' | 'LIVE';
+  metrics: DashboardMetrics | null;
+  isLoading: boolean;
+  errorMessage: string | null;
+  warnings: string[];
+  lastFetchedAt: string | null;
+  onRefresh: () => void;
+  onOpenConnection: () => void;
 }
 
-export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSelectSql }) => {
+const compact = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+
+const seconds = (value: number) => `${Number(value.toFixed(2)).toLocaleString()} 초`;
+
+const severityRank = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+
+export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({
+  sqlList,
+  onSelectSql,
+  dataSource,
+  metrics,
+  isLoading,
+  errorMessage,
+  warnings,
+  lastFetchedAt,
+  onRefresh,
+  onOpenConnection,
+}) => {
+  const isLive = dataSource === 'LIVE';
+  const totalShare = Math.min(100, sqlList.reduce((sum, item) => sum + item.dbTimePercentage, 0));
+  const gaugeOffset = 125.6 - (125.6 * totalShare) / 100;
+  const totalExecutions = sqlList.reduce((sum, item) => sum + item.executions, 0);
+  const totalBufferGets = sqlList.reduce((sum, item) => sum + item.bufferGets, 0);
+  const totalDiskReads = sqlList.reduce((sum, item) => sum + item.diskReads, 0);
+  const totalUserIoWait = sqlList.reduce((sum, item) => sum + item.userIoWaitSec, 0);
+
+  // 추천 카드는 고정 문구가 아니라 현재 목록의 안티패턴에서 동적으로 만든다.
+  const recommendations = sqlList
+    .flatMap((item) => item.antiPatterns.map((ap) => ({ item, ap })))
+    .sort((a, b) =>
+      severityRank[a.ap.severity] - severityRank[b.ap.severity]
+      || b.item.dbTimePercentage - a.item.dbTimePercentage,
+    )
+    .slice(0, 3);
+
   return (
     <div className="dashboard-container">
-      {/* Top Section Header */}
       <div className="section-header">
         <div>
           <h2 className="section-title">
@@ -18,34 +60,61 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
             <span>v$sqlstats 기반 Top High-Load SQL 미션 컨트롤</span>
           </h2>
           <p className="section-subtitle">
-            Oracle DB 성능을 실시간 모니터링하고 DB Time 점유율이 높은 쿼리에 대해 AI 튜닝을 즉시 적용합니다.
+            {isLive
+              ? '로컬 백엔드 에이전트가 Oracle V$SQLSTATS에서 조회한 실데이터입니다.'
+              : 'DB 연결 전 샘플 데이터입니다. Oracle에 연결하면 V$SQLSTATS 실데이터로 전환됩니다.'}
           </p>
         </div>
-        <div className="stat-badge">
-          <span>실시간 튜닝 대상: <strong>{sqlList.length} 개 쿼리</strong></span>
+        <div className="header-actions">
+          <div className="stat-badge">
+            <span>{isLive ? `실데이터 · 마지막 조회 ${lastFetchedAt || '-'}` : '샘플 데이터'} · <strong>{sqlList.length} 개 쿼리</strong></span>
+          </div>
+          {isLive ? (
+            <button className="action-btn" onClick={onRefresh} disabled={isLoading}>
+              <RefreshCw className={`icon ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? '조회 중...' : '새로고침'}</span>
+            </button>
+          ) : (
+            <button className="action-btn" onClick={onOpenConnection}>
+              <Database className="icon text-cyan" />
+              <span>DB 연결 설정</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* KPI & Global Gauge Row (Stitch MCP Design System) */}
+      {errorMessage && (
+        <div className="status-banner error animate-fade-in">
+          <AlertTriangle className="icon text-red" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+      {!errorMessage && !isLive && (
+        <div className="status-banner info animate-fade-in">
+          <AlertTriangle className="icon text-amber" />
+          <span>아래 수치와 목록은 샘플 데이터 기준입니다. 실제 판단에는 사용하지 마세요.</span>
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div className="status-banner info animate-fade-in">
+          <AlertTriangle className="icon text-amber" />
+          <span>일부 항목을 가져오지 못했습니다: {warnings.slice(0, 2).join(' / ')}{warnings.length > 2 ? ` 외 ${warnings.length - 2}건` : ''}</span>
+        </div>
+      )}
+
+      {/* KPI Row: 모든 수치를 현재 sqlList와 실측 지표에서 계산한다 */}
       <div className="kpi-gauge-grid margin-bottom-lg">
-        {/* 1. Global Performance Ring Gauge Card */}
         <div className="obsidian-kpi-card gauge-card">
           <div className="gauge-container">
             <svg viewBox="0 0 100 60" className="ring-gauge-svg">
-              <path
-                d="M 10 50 A 40 40 0 0 1 90 50"
-                fill="none"
-                stroke="rgba(255, 255, 255, 0.08)"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
+              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="10" strokeLinecap="round" />
               <path
                 d="M 10 50 A 40 40 0 0 1 90 50"
                 fill="none"
                 stroke="url(#cyanGlowGrad)"
                 strokeWidth="10"
                 strokeDasharray="125.6"
-                strokeDashoffset="13.8"
+                strokeDashoffset={gaugeOffset}
                 strokeLinecap="round"
               />
               <defs>
@@ -56,108 +125,75 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
               </defs>
             </svg>
             <div className="gauge-center-text">
-              <span className="gauge-percent">89%</span>
-              <span className="gauge-label">Global Health</span>
+              <span className="gauge-percent">{totalShare.toFixed(1)}%</span>
+              <span className="gauge-label">Top SQL Share</span>
             </div>
           </div>
           <div className="gauge-meta">
-            <span className="meta-title">DB Time Score</span>
-            <span className="meta-status text-green">Optimal Status</span>
+            <span className="meta-title">표시 중인 쿼리의 DB Time 비중 합계</span>
+            <span className="meta-status text-green">{isLive ? 'V$SQLSTATS 실측' : '샘플 데이터'}</span>
           </div>
         </div>
 
-        {/* 2. Active Sessions KPI Card */}
         <div className="obsidian-kpi-card">
           <div className="kpi-top">
-            <span className="kpi-label">Active Sessions</span>
-            <span className="kpi-trend text-green">+16.8%</span>
+            <span className="kpi-label">{metrics?.activeSessions != null ? 'Active Sessions' : 'Top SQL 총 수행횟수'}</span>
+            <span className="kpi-trend text-green">{isLive ? '실데이터' : '샘플'}</span>
           </div>
           <div className="kpi-body">
             <div className="kpi-num-group">
-              <span className="kpi-value text-main">56</span>
-              <span className="kpi-unit">sessions</span>
-            </div>
-            {/* Sparkline SVG */}
-            <div className="sparkline-wrap">
-              <svg className="sparkline-svg" viewBox="0 0 100 24">
-                <polyline
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="2"
-                  points="0,20 15,18 30,12 45,15 60,8 75,10 90,4 100,6"
-                />
-              </svg>
+              <span className="kpi-value text-main">{metrics?.activeSessions != null ? metrics.activeSessions : compact(totalExecutions)}</span>
+              <span className="kpi-unit">{metrics?.activeSessions != null ? 'sessions' : '회'}</span>
             </div>
           </div>
           <div className="kpi-foot">
             <Activity className="icon-xs text-green" />
-            <span>Optimal Workload Distribution</span>
+            <span>{metrics?.activeSessions != null ? 'V$SESSION ACTIVE 기준' : '표시 중인 SQL executions 합계'}</span>
           </div>
         </div>
 
-        {/* 3. IOPS Metric KPI Card */}
         <div className="obsidian-kpi-card">
           <div className="kpi-top">
-            <span className="kpi-label">User I/O IOPS</span>
-            <span className="kpi-trend text-cyan">+10.8%</span>
+            <span className="kpi-label">Top SQL Disk Reads</span>
+            <span className="kpi-trend text-cyan">{isLive ? '실데이터' : '샘플'}</span>
           </div>
           <div className="kpi-body">
             <div className="kpi-num-group">
-              <span className="kpi-value text-cyan">222</span>
-              <span className="kpi-unit">k IOPS</span>
-            </div>
-            {/* Sparkline SVG */}
-            <div className="sparkline-wrap">
-              <svg className="sparkline-svg" viewBox="0 0 100 24">
-                <polyline
-                  fill="none"
-                  stroke="#06b6d4"
-                  strokeWidth="2"
-                  points="0,16 15,14 30,19 45,10 60,12 75,5 90,7 100,2"
-                />
-              </svg>
+              <span className="kpi-value text-cyan">{compact(totalDiskReads)}</span>
+              <span className="kpi-unit">reads</span>
             </div>
           </div>
           <div className="kpi-foot">
             <HardDrive className="icon-xs text-cyan" />
-            <span>NVMe Flash Array I/O Wait 0.4ms</span>
+            <span>User I/O 대기 합계 {seconds(totalUserIoWait)}</span>
           </div>
         </div>
 
-        {/* 4. Memory / Buffer Gets KPI Card */}
         <div className="obsidian-kpi-card">
           <div className="kpi-top">
-            <span className="kpi-label">SGA / Buffer Cache</span>
-            <span className="kpi-trend text-amber">-1.3%</span>
+            <span className="kpi-label">{metrics?.bufferCacheHitRatio != null ? 'Buffer Cache Hit Ratio' : 'Top SQL Buffer Gets'}</span>
+            <span className="kpi-trend text-amber">{isLive ? '실데이터' : '샘플'}</span>
           </div>
           <div className="kpi-body">
             <div className="kpi-num-group">
-              <span className="kpi-value text-amber">100</span>
-              <span className="kpi-unit">MB/s</span>
-            </div>
-            {/* Sparkline SVG */}
-            <div className="sparkline-wrap">
-              <svg className="sparkline-svg" viewBox="0 0 100 24">
-                <polyline
-                  fill="none"
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                  points="0,8 15,10 30,6 45,14 60,11 75,18 90,15 100,20"
-                />
-              </svg>
+              <span className="kpi-value text-amber">{metrics?.bufferCacheHitRatio != null ? metrics.bufferCacheHitRatio : compact(totalBufferGets)}</span>
+              <span className="kpi-unit">{metrics?.bufferCacheHitRatio != null ? '%' : 'gets'}</span>
             </div>
           </div>
           <div className="kpi-foot">
-            <Cpu className="icon-xs text-amber" />
-            <span>Cache Hit Ratio 99.4%</span>
+            <Database className="icon-xs text-amber" />
+            <span>{metrics?.bufferCacheHitRatio != null ? '인스턴스 시작 이후 누적 기준' : '표시 중인 SQL buffer_gets 합계'}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Left SQL List vs Right AI Recommendation Floating Panel */}
       <div className="dashboard-main-split">
-        {/* Left: Top High-Load SQL List */}
         <div className="sql-card-grid">
+          {sqlList.length === 0 && (
+            <div className="sql-card">
+              <p className="section-subtitle">표시할 SQL이 없습니다. V$SQLSTATS에 누적된 실행 통계가 있는지 확인해 주세요.</p>
+            </div>
+          )}
           {sqlList.map((item, index) => (
             <div key={item.id} className="sql-card">
               <div className="card-top">
@@ -172,30 +208,25 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
                 </div>
               </div>
 
-              {/* DB Time 점유 프로그레스 바 */}
               <div className="progress-container">
-                <div 
-                  className="progress-bar" 
-                  style={{ width: `${item.dbTimePercentage}%` }}
-                ></div>
+                <div className="progress-bar" style={{ width: `${Math.min(100, item.dbTimePercentage)}%` }}></div>
               </div>
 
-              {/* 메트릭 그리드 */}
               <div className="metrics-row">
                 <div className="metric-box">
                   <Clock className="box-icon text-cyan" />
                   <span className="box-label">총 소요시간</span>
-                  <span className="box-value">{item.elapsedTimeSec} 초</span>
+                  <span className="box-value">{seconds(item.elapsedTimeSec)}</span>
                 </div>
                 <div className="metric-box">
                   <Activity className="box-icon text-purple" />
                   <span className="box-label">CPU 시간</span>
-                  <span className="box-value">{item.cpuTimeSec} 초</span>
+                  <span className="box-value">{seconds(item.cpuTimeSec)}</span>
                 </div>
                 <div className="metric-box">
                   <Database className="box-icon text-amber" />
                   <span className="box-label">User I/O 대기</span>
-                  <span className="box-value">{item.userIoWaitSec} 초</span>
+                  <span className="box-value">{seconds(item.userIoWaitSec)}</span>
                 </div>
                 <div className="metric-box">
                   <span className="box-label">Buffer Gets</span>
@@ -203,12 +234,10 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
                 </div>
               </div>
 
-              {/* SQL 텍스트 코드 블록 */}
               <div className="code-snippet-box">
                 <pre className="code-content">{item.sqlText}</pre>
               </div>
 
-              {/* 안티패턴 태그 */}
               <div className="antipattern-tags">
                 {item.antiPatterns.map((ap, i) => (
                   <span key={i} className={`ap-tag ap-${ap.severity.toLowerCase()}`}>
@@ -216,14 +245,13 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
                     {ap.title}
                   </span>
                 ))}
+                {item.antiPatterns.length === 0 && (
+                  <span className="ap-tag ap-low">탐지된 안티패턴 없음</span>
+                )}
               </div>
 
-              {/* 액션 버튼 */}
               <div className="card-actions">
-                <button 
-                  className="action-btn primary-btn"
-                  onClick={() => onSelectSql(item)}
-                >
+                <button className="action-btn primary-btn" onClick={() => onSelectSql(item)}>
                   <Zap className="btn-icon text-amber" />
                   <span>AI Rule Engine 자동 튜닝 및 진단</span>
                   <ArrowRight className="btn-arrow" />
@@ -233,77 +261,46 @@ export const TopSqlDashboard: React.FC<TopSqlDashboardProps> = ({ sqlList, onSel
           ))}
         </div>
 
-        {/* Right: AI Auto-Tuning Recommendations Panel (Obsidian Query Stitch Style) */}
         <div className="ai-recommendations-panel">
           <div className="panel-header">
             <Sparkles className="panel-icon text-amethyst" />
             <div>
               <h3 className="panel-title">AI Auto-Tuning Insights</h3>
-              <p className="panel-sub">LM Studio 로컬 AI 가동 중</p>
+              <p className="panel-sub">{isLive ? '실데이터 기반 규칙 엔진 분석' : '샘플 데이터 기반 규칙 엔진 예시'}</p>
             </div>
           </div>
 
           <div className="ai-cards-stack">
-            {/* AI Recommendation Card 1 */}
-            <div className="obsidian-ai-card">
-              <div className="ai-card-top">
-                <span className="ai-badge">High Priority</span>
-                <span className="gain-tag text-green">+85.4% Gain</span>
+            {recommendations.map(({ item, ap }, index) => (
+              <div key={`${item.id}-${ap.type}-${index}`} className="obsidian-ai-card">
+                <div className="ai-card-top">
+                  <span className={`ai-badge ${index === 1 ? 'purple-badge' : index === 2 ? 'cyan-badge' : ''}`}>
+                    {ap.severity === 'HIGH' ? 'High Priority' : ap.severity === 'MEDIUM' ? 'Medium Priority' : 'Low Priority'}
+                  </span>
+                  <span className="gain-tag text-green">DB Time {item.dbTimePercentage}%</span>
+                </div>
+                <h4 className="ai-card-title">{ap.title}</h4>
+                <p className="ai-card-desc">{ap.recommendation}</p>
+                {ap.suggestedHints[0] && (
+                  <div className="ai-code-chip">
+                    <code>{ap.suggestedHints[0]}</code>
+                  </div>
+                )}
+                <button className="ai-apply-btn" onClick={() => onSelectSql(item)}>
+                  <span>이 SQL 진단하기</span>
+                  <ChevronRight className="icon-xs" />
+                </button>
               </div>
-              <h4 className="ai-card-title">복합 인덱스 (JOB, SAL) 생성 제안</h4>
-              <p className="ai-card-desc">
-                EMP 테이블에 FULL SCAN 병목이 발생하고 있습니다. 인덱스를 추가하여 INDEX RANGE SCAN으로 전환하십시오.
-              </p>
-              <div className="ai-code-chip">
-                <code>CREATE INDEX idx_emp_job_sal ON emp(job, sal);</code>
+            ))}
+            {recommendations.length === 0 && (
+              <div className="obsidian-ai-card">
+                <h4 className="ai-card-title">탐지된 안티패턴이 없습니다</h4>
+                <p className="ai-card-desc">개별 SQL을 선택해 실행계획 진단을 실행해 주세요.</p>
               </div>
-              <button className="ai-apply-btn" onClick={() => onSelectSql(sqlList[0])}>
-                <span>튜닝 자동 적용 시뮬레이션</span>
-                <ChevronRight className="icon-xs" />
-              </button>
-            </div>
-
-            {/* AI Recommendation Card 2 */}
-            <div className="obsidian-ai-card">
-              <div className="ai-card-top">
-                <span className="ai-badge purple-badge">SQL Rewrite</span>
-                <span className="gain-tag text-cyan">+62.0% Gain</span>
-              </div>
-              <h4 className="ai-card-title">리터럴 상수 바인드 변수화 (:B1)</h4>
-              <p className="ai-card-desc">
-                HARD PARSE(하드 파싱)로 인한 Shared Pool CPU 점유율 증가를 방지하기 위해 바인드 변수화가 필요합니다.
-              </p>
-              <div className="ai-code-chip">
-                <code>WHERE job = :b1 AND sal &gt; :b2</code>
-              </div>
-              <button className="ai-apply-btn" onClick={() => onSelectSql(sqlList[0])}>
-                <span>튜닝 자동 적용 시뮬레이션</span>
-                <ChevronRight className="icon-xs" />
-              </button>
-            </div>
-
-            {/* AI Recommendation Card 3 */}
-            <div className="obsidian-ai-card">
-              <div className="ai-card-top">
-                <span className="ai-badge cyan-badge">Optimizer Hint</span>
-                <span className="gain-tag text-green">+92.1% Gain</span>
-              </div>
-              <h4 className="ai-card-title">LEADING(e d) USE_NL(d) 힌트 주입</h4>
-              <p className="ai-card-desc">
-                대용량 테이블 HASH JOIN 대신 인덱스 기반 NESTED LOOPS JOIN으로 조인 방식을 전환합니다.
-              </p>
-              <div className="ai-code-chip">
-                <code>/*+ LEADING(e d) USE_NL(d) */</code>
-              </div>
-              <button className="ai-apply-btn" onClick={() => onSelectSql(sqlList[0])}>
-                <span>튜닝 자동 적용 시뮬레이션</span>
-                <ChevronRight className="icon-xs" />
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-

@@ -79,9 +79,50 @@ export interface OracleConnectionConfig {
   serviceName: string;
   username: string;
   password?: string;
+  /** 로컬 백엔드 에이전트에 OTUNE_API_TOKEN을 설정한 경우에만 필요하다. 메모리에서만 유지한다. */
+  agentToken?: string;
   useDrcp: boolean;
   status: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
   lastConnectedAt?: string;
+}
+
+export interface DashboardMetrics {
+  activeSessions: number | null;
+  /** 인스턴스 시작 이후 누적 기준 버퍼 캐시 히트율(%) */
+  bufferCacheHitRatio: number | null;
+  instanceStartedAt: string | null;
+}
+
+/** 백엔드가 V$SQLSTATS에서 변환해 돌려주는 원시 Top SQL 행 */
+export interface OracleTopSqlRow {
+  id: string;
+  sqlId: string;
+  sqlText: string;
+  elapsedTimeSec: number;
+  cpuTimeSec: number;
+  userIoWaitSec: number;
+  bufferGets: number;
+  diskReads: number;
+  executions: number;
+  dbTimePercentage: number;
+  executionPlan: string;
+}
+
+export interface OracleDashboardResponse {
+  source: 'live';
+  fetchedAt: string;
+  items: OracleTopSqlRow[];
+  metrics: DashboardMetrics;
+  warnings: string[];
+}
+
+export interface OracleConnectionTestResult {
+  ok: boolean;
+  latencyMs: number;
+  databaseName: string | null;
+  serviceName: string | null;
+  currentUser: string | null;
+  version: string | null;
 }
 
 export interface LmStudioConfig {

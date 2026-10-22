@@ -8,7 +8,7 @@ echo =======================================================================
 echo.
 
 :: 1. LM Studio 로컬 AI 앱 자동 탐색 및 실행
-echo [1/3] LM Studio 로컬 AI 서버 실행 상태 확인 중...
+echo [1/4] LM Studio 로컬 AI 서버 실행 상태 확인 중...
 
 tasklist /FI "IMAGENAME eq LM Studio.exe" 2>NUL | find /I /N "LM Studio.exe" >NUL
 if "%ERRORLEVEL%"=="0" (
@@ -27,14 +27,20 @@ if "%ERRORLEVEL%"=="0" (
 
 echo.
 
-:: 2. 오튠(ORCL-Tune) Vite 개발 서버 백그라운드 구동
-echo [2/3] 오튠 오라클 튜닝 솔루션(Vite Web Server) 구동 중...
+:: 2. 오라클 실연동 로컬 백엔드 에이전트 백그라운드 구동
+echo [2/4] 오라클 백엔드 에이전트(8787) 구동 중...
+start /b cmd /c "npm run server"
+
+echo.
+
+:: 3. 오튠(ORCL-Tune) Vite 개발 서버 백그라운드 구동
+echo [3/4] 오튠 오라클 튜닝 솔루션(Vite Web Server) 구동 중...
 start /b cmd /c "npm run dev"
 
 echo.
 
-:: 3. 브라우저 자동 오픈
-echo [3/3] 웹 브라우저에서 오튠 솔루션을 엽니다 (http://localhost:5173/)...
+:: 4. 브라우저 자동 오픈
+echo [4/4] 웹 브라우저에서 오튠 솔루션을 엽니다 (http://localhost:5173/)...
 timeout /t 3 /nobreak > NUL
 start http://localhost:5173/
 
@@ -42,6 +48,7 @@ echo.
 echo =======================================================================
 echo  ✅ 성공적으로 실행되었습니다!
 echo  - 오튠 주소: http://localhost:5173/
+echo  - 오라클 백엔드 에이전트: http://127.0.0.1:8787/oracle-api/health
 echo  - LM Studio API: http://localhost:1234
 echo.
 echo  이 창을 닫으면 개발 서버가 종료될 수 있으니 창을 유지해 주세요.

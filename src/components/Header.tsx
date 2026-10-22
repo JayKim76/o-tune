@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenConnectModal: () => void;
   lmConfig: LmStudioConfig;
   onOpenLmStudioModal: () => void;
+  dbTimeSummary: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -17,8 +18,11 @@ export const Header: React.FC<HeaderProps> = ({
   dbConfig,
   onOpenConnectModal,
   lmConfig,
-  onOpenLmStudioModal
+  onOpenLmStudioModal,
+  dbTimeSummary
 }) => {
+  const dbStatusLabel = dbConfig.status === 'CONNECTED' ? '연결됨' : dbConfig.status === 'CONNECTING' ? '연결 중' : '미연결';
+  const dbStatusClass = dbConfig.status === 'CONNECTED' ? 'text-green' : 'text-amber';
   return (
     <header className="app-header">
       <div className="header-top">
@@ -52,9 +56,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Database className="pill-icon text-cyan" />
             <div>
               <span className="pill-label">Oracle DB Session</span>
-              <span className="pill-value text-green flex-align">
-                <CheckCircle2 className="icon-sm text-green" />
-                {dbConfig.host}:{dbConfig.port}/{dbConfig.serviceName}
+              <span className={`pill-value ${dbStatusClass} flex-align`}>
+                <CheckCircle2 className={`icon-sm ${dbStatusClass}`} />
+                {dbStatusLabel} · {dbConfig.host}:{dbConfig.port}/{dbConfig.serviceName}
               </span>
             </div>
             <Settings className="settings-gear icon" />
@@ -63,8 +67,8 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="metric-pill">
             <Activity className="pill-icon text-cyan" />
             <div>
-              <span className="pill-label">Total DB Time</span>
-              <span className="pill-value text-cyan">42.8 초 / min</span>
+              <span className="pill-label">Top SQL DB Time 비중</span>
+              <span className="pill-value text-cyan">{dbTimeSummary}</span>
             </div>
           </div>
         </div>

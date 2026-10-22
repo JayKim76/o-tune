@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import type { OracleConnectionConfig } from '../types/oracle';
-import { Database, Server, User, CheckCircle2, X, Activity, RefreshCw, Lock } from 'lucide-react';
+import type { OracleConnectionConfig, OracleConnectionTestResult } from '../types/oracle';
+import { testOracleConnection } from '../utils/oracleBackendApi';
+import { Database, Server, User, CheckCircle2, X, Activity, RefreshCw, Lock, AlertTriangle, KeyRound } from 'lucide-react';
 
 interface DbConnectionModalProps {
   isOpen: boolean;
@@ -17,26 +18,53 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<OracleConnectionConfig>({ ...config });
   const [testing, setTesting] = useState<boolean>(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+
+  // 모달이 열릴 때마다 바깥(App)의 최신 연결 설정을 폼에 반영한다.
+  const [wasOpen, setWasOpen] = useState<boolean>(false);
+  if (isOpen && !wasOpen) {
+    setWasOpen(true);
+    setFormData({ ...config });
+    setTestResult(null);
+  } else if (!isOpen && wasOpen) {
+    setWasOpen(false);
+  }
 
   if (!isOpen) return null;
 
-  const handleTestConnection = () => {
+  const runTest = async (): Promise<OracleConnectionTestResult | null> => {
     setTesting(true);
     setTestResult(null);
-    setTimeout(() => {
+    try {
+      const result = await testOracleConnection(formData);
+      setTestResult({
+        kind: 'success',
+        message: `연결 성공 · 응답 ${result.latencyMs}ms · DB ${result.databaseName || '-'} · Oracle ${result.version || '버전 미확인'} · 사용자 ${result.currentUser || formData.username}`,
+      });
+      return result;
+    } catch (error) {
+      setTestResult({
+        kind: 'error',
+        message: error instanceof Error ? error.message : '연결 테스트에 실패했습니다.',
+      });
+      return null;
+    } finally {
       setTesting(false);
-      // 브라우저에서는 Oracle에 직접 접속할 수 없다. 성공으로 가장하지 않고 한계를 그대로 알린다.
-      setTestResult('실제 연결 테스트는 수행되지 않았습니다. 브라우저에서 Oracle DB로 직접 연결할 수 없으며, 실연동에는 백엔드 또는 로컬 에이전트가 필요합니다. 입력값은 화면 표기용으로만 저장됩니다.');
-    }, 600);
+    }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleTestConnection = async () => {
+    await runTest();
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = await runTest();
+    if (!result) return;
     onSaveConfig({
       ...formData,
-      status: 'DISCONNECTED',
-      lastConnectedAt: undefined
+      status: 'CONNECTED',
+      lastConnectedAt: new Date().toLocaleTimeString()
     });
     onClose();
   };
@@ -63,7 +91,7 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
 
         <form onSubmit={handleSave} className="modal-body">
           <p className="modal-subtitle">
-            오라클 DB 커넥션 파라미터를 지정합니다. 현재 버전은 실연동 백엔드가 없어, 설정값은 화면 표기용으로만 쓰입니다.
+            로컬 백엔드 에이전트(npm run server)를 통해 실제 Oracle 연결을 테스트합니다. 비밀번호는 백엔드에 저장되지 않고, 이 화면의 메모리에서만 유지됩니다.
           </p>
 
           <div className="form-grid">
@@ -138,6 +166,21 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
                 value={formData.password || ''}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div className="form-group full-width">
+              <label className="form-label">
+                <KeyRound className="label-icon text-amber" />
+                <span>로컬 에이전트 토큰 (선택)</span>
+              </label>
+              <input
+                type="password"
+                className="form-input"
+                value={formData.agentToken || ''}
+                onChange={(e) => setFormData({ ...formData, agentToken: e.target.value })}
+                placeholder="에이전트 실행 시 OTUNE_API_TOKEN을 설정한 경우에만 입력"
               />
             </div>
 
@@ -157,8 +200,10 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
           {/* 연결 테스트 결과 */}
           {testResult && (
             <div className="test-result-box">
-              <CheckCircle2 className="icon" />
-              <span>{testResult}</span>
+              {testResult.kind === 'success'
+                ? <CheckCircle2 className="icon text-green" />
+                : <AlertTriangle className="icon text-red" />}
+              <span>{testResult.message}</span>
             </div>
           )}
 
@@ -179,9 +224,9 @@ export const DbConnectionModal: React.FC<DbConnectionModalProps> = ({
               <span>{testing ? '연결 테스트 중...' : 'DB 연결 테스트'}</span>
             </button>
 
-            <button type="submit" className="action-btn primary-btn">
+            <button type="submit" className="action-btn primary-btn" disabled={testing}>
               <CheckCircle2 className="icon" />
-              <span>연결 설정 적용 및 저장</span>
+              <span>{testing ? '연결 확인 중...' : '연결 확인 후 저장하고 실데이터 조회'}</span>
             </button>
           </div>
         </form>

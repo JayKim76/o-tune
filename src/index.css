@@ -264,6 +264,14 @@ body {
   color: var(--text-muted);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* Dashboard Cards Grid */
 .sql-card-grid {
   display: flex;

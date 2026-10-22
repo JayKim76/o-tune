@@ -111,9 +111,9 @@ WHERE e.deptno = d.deptno
         <div className="diff-box">
           <div className="diff-box-header header-after">
             <span className="badge-after">Tuned SQL</span>
-            <span>힌트 주입 및 바인드 변수화 문장</span>
+            <span>{item.tunedSql ? '힌트 주입 및 바인드 변수화 문장' : '진단 후 생성됩니다'}</span>
           </div>
-          <pre className="code-content text-green-glow">{item.tunedSql || item.sqlText}</pre>
+          <pre className="code-content text-green-glow">{item.tunedSql || '아직 생성된 튜닝 SQL이 없습니다. SQL 진단 화면에서 진단을 실행해 주세요.'}</pre>
         </div>
       </div>
 
@@ -130,9 +130,9 @@ WHERE e.deptno = d.deptno
         <div className="diff-box">
           <div className="diff-box-header header-after">
             <span className="badge-after">Tuned Plan</span>
-            <span>인덱스 스캔 및 비용 교정 Plan</span>
+            <span>{item.tunedPlan ? '인덱스 스캔 및 비용 교정 Plan' : '실행 후 확인 필요'}</span>
           </div>
-          <pre className="code-content plan-code text-green-glow">{item.tunedPlan || item.executionPlan}</pre>
+          <pre className="code-content plan-code text-green-glow">{item.tunedPlan || '튜닝 후 실행계획은 아직 없습니다.\n튜닝 SQL을 실제 DB에서 실행한 뒤 DBMS_XPLAN.DISPLAY_CURSOR로 확인해야 합니다.'}</pre>
         </div>
       </div>
     </div>

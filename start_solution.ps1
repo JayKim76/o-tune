@@ -5,7 +5,7 @@ Write-Host "====================================================================
 Write-Host ""
 
 # 1. LM Studio 구동 확인
-Write-Host "[1/3] LM Studio 로컬 AI 서버 실행 확인 중..." -ForegroundColor Yellow
+Write-Host "[1/4] LM Studio 로컬 AI 서버 실행 확인 중..." -ForegroundColor Yellow
 $lmProcess = Get-Process -Name "LM Studio" -ErrorAction SilentlyContinue
 
 if ($lmProcess) {
@@ -22,12 +22,16 @@ if ($lmProcess) {
 
 Write-Host ""
 
-# 2. Vite Web Server 실행
-Write-Host "[2/3] 오튠 개발 서버(Vite)를 시작합니다..." -ForegroundColor Yellow
+# 2. 오라클 실연동 로컬 백엔드 에이전트 실행
+Write-Host "[2/4] 오라클 백엔드 에이전트(8787)를 시작합니다..." -ForegroundColor Yellow
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run server" -WindowStyle Hidden
+
+# 3. Vite Web Server 실행
+Write-Host "[3/4] 오튠 개발 서버(Vite)를 시작합니다..." -ForegroundColor Yellow
 Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run dev" -WindowStyle Hidden
 
-# 3. 브라우저 오픈
-Write-Host "[3/3] 브라우저(http://localhost:5173/)를 엽니다..." -ForegroundColor Yellow
+# 4. 브라우저 오픈
+Write-Host "[4/4] 브라우저(http://localhost:5173/)를 엽니다..." -ForegroundColor Yellow
 Start-Sleep -Seconds 3
 Start-Process "http://localhost:5173/"
 
@@ -35,4 +39,5 @@ Write-Host ""
 Write-Host "=======================================================================" -ForegroundColor Green
 Write-Host " ✅ 오튠 솔루션 및 LM Studio 구동 준비 완료!" -ForegroundColor Green
 Write-Host " - 웹 접속 주소: http://localhost:5173/" -ForegroundColor Green
+Write-Host " - 오라클 백엔드 상태: http://127.0.0.1:8787/oracle-api/health" -ForegroundColor Green
 Write-Host "=======================================================================" -ForegroundColor Green
