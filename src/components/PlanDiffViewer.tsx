@@ -1,13 +1,27 @@
-import React from 'react';
-import type { TopSqlItem } from '../types/oracle';
+import React, { useState } from 'react';
+import type { OracleConnectionConfig, TopSqlItem } from '../types/oracle';
 import { parsePlanCost, parsePlanTimeSec } from '../utils/sqlParser';
-import { Layers, TrendingDown, Clock, Database } from 'lucide-react';
+import { fetchExplainPlan } from '../utils/oracleBackendApi';
+import { Layers, TrendingDown, Clock, Database, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface PlanDiffViewerProps {
   selectedSqlItem?: TopSqlItem | null;
+  dbConfig?: OracleConnectionConfig | null;
 }
 
-export const PlanDiffViewer: React.FC<PlanDiffViewerProps> = ({ selectedSqlItem }) => {
+export const PlanDiffViewer: React.FC<PlanDiffViewerProps> = ({ selectedSqlItem, dbConfig }) => {
+  const [estimatedPlan, setEstimatedPlan] = useState<string | null>(null);
+  const [explainError, setExplainError] = useState<string | null>(null);
+  const [isExplaining, setIsExplaining] = useState<boolean>(false);
+
+  // 선택한 SQL이 바뀌면 이전 예상 계획은 버린다.
+  const [planOwnerSqlId, setPlanOwnerSqlId] = useState<string | undefined>(selectedSqlItem?.sqlId);
+  if (planOwnerSqlId !== selectedSqlItem?.sqlId) {
+    setPlanOwnerSqlId(selectedSqlItem?.sqlId);
+    setEstimatedPlan(null);
+    setExplainError(null);
+  }
+
   const item = selectedSqlItem || {
     sqlId: '9a8bc7def123',
     sqlText: `SELECT e.empno, e.ename, d.dname, e.sal
@@ -34,7 +48,7 @@ WHERE e.deptno = d.deptno
 |   0 | SELECT STATEMENT            |                 |  1450 | 58000 |    12   (0)| 00:00:01 |
 |   1 |  NESTED LOOPS               |                 |  1450 | 58000 |    12   (0)| 00:00:01 |
 |   2 |   TABLE ACCESS BY INDEX ROWID| EMP             |   145 |  4350 |     8   (0)| 00:00:01 |
-|*  3 |    INDEX RANGE SCAN         | IDX_EMP_JOB_SAL |   145 |     0 |     2   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN         | IDX_EMP_JOB_SAL |  145 |     0 |     2   (0)| 00:00:01 |
 |   4 |   TABLE ACCESS BY INDEX ROWID| DEPT            |     1 |    10 |     1   (0)| 00:00:01 |
 |*  5 |    INDEX UNIQUE SCAN        | PK_DEPT         |     1 |     0 |     0   (0)| 00:00:01 |
 -------------------------------------------------------------------------------------------------`,
@@ -42,14 +56,34 @@ WHERE e.deptno = d.deptno
     bufferGets: 845200
   };
 
-  // 성과 수치는 고정값이 아니라 선택된 SQL의 실행계획에서 직접 파싱해 계산한다.
+  const isConnected = dbConfig?.status === 'CONNECTED' && Boolean(dbConfig?.password);
+  // 표시할 튜닝 후 계획: 실행된 실제 계획이 있으면 그것, 없으면 EXPLAIN PLAN 예상 계획.
+  const displayTunedPlan = item.tunedPlan || estimatedPlan;
+  const isEstimated = !item.tunedPlan && Boolean(estimatedPlan);
+
+  const handleExplain = async () => {
+    if (!dbConfig || !item.tunedSql) return;
+    setIsExplaining(true);
+    setExplainError(null);
+    try {
+      const result = await fetchExplainPlan(dbConfig, item.tunedSql);
+      setEstimatedPlan(result.planText);
+    } catch (error) {
+      setExplainError(error instanceof Error ? error.message : 'EXPLAIN PLAN 조회에 실패했습니다.');
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
+  // 성과 수치는 고정값이 아니라 실행계획 텍스트에서 직접 파싱해 계산한다.
+  // 예상 계획의 수치는 옵티마이저 추정치이며 실측이 아니다.
   const origCost = parsePlanCost(item.executionPlan);
-  const tunedCost = item.tunedPlan ? parsePlanCost(item.tunedPlan) : null;
+  const tunedCost = displayTunedPlan ? parsePlanCost(displayTunedPlan) : null;
   const costReduction = origCost && tunedCost
     ? Number((((origCost - tunedCost) / origCost) * 100).toFixed(1))
     : null;
   const origTime = parsePlanTimeSec(item.executionPlan);
-  const tunedTime = item.tunedPlan ? parsePlanTimeSec(item.tunedPlan) : null;
+  const tunedTime = displayTunedPlan ? parsePlanTimeSec(displayTunedPlan) : null;
   const timeReduction = origTime && tunedTime
     ? Number((((origTime - tunedTime) / origTime) * 100).toFixed(1))
     : null;
@@ -75,7 +109,7 @@ WHERE e.deptno = d.deptno
           <div>
             <span className="impact-title">Optimizer Cost 감소율 (실행계획 파싱)</span>
             <span className="impact-value text-cyan">{costReduction !== null ? `-${costReduction}%` : '산출 불가'}</span>
-            <span className="impact-sub">Cost: {origCost?.toLocaleString() ?? '-'} ➔ {tunedCost?.toLocaleString() ?? '-'}</span>
+            <span className="impact-sub">{isEstimated ? '예상 ' : ''}Cost: {origCost?.toLocaleString() ?? '-'} ➔ {tunedCost?.toLocaleString() ?? '-'}</span>
           </div>
         </div>
 
@@ -84,7 +118,7 @@ WHERE e.deptno = d.deptno
           <div>
             <span className="impact-title">소요시간 (실행계획 Time)</span>
             <span className="impact-value text-green">{timeReduction !== null ? `-${timeReduction}%` : '산출 불가'}</span>
-            <span className="impact-sub">{origTime ?? '-'}초 ➔ {tunedTime ?? '-'}초</span>
+            <span className="impact-sub">{origTime ?? '-'}초 ➔ {tunedTime ?? '-'}초{isEstimated ? ' (예상)' : ''}</span>
           </div>
         </div>
 
@@ -130,9 +164,32 @@ WHERE e.deptno = d.deptno
         <div className="diff-box">
           <div className="diff-box-header header-after">
             <span className="badge-after">Tuned Plan</span>
-            <span>{item.tunedPlan ? '인덱스 스캔 및 비용 교정 Plan' : '실행 후 확인 필요'}</span>
+            <span>{item.tunedPlan ? '실행된 실제 계획' : isEstimated ? 'EXPLAIN PLAN 예상 계획 (실행하지 않음)' : 'EXPLAIN PLAN으로 확인 가능'}</span>
           </div>
-          <pre className="code-content plan-code text-green-glow">{item.tunedPlan || '튜닝 후 실행계획은 아직 없습니다.\n튜닝 SQL을 실제 DB에서 실행한 뒤 DBMS_XPLAN.DISPLAY_CURSOR로 확인해야 합니다.'}</pre>
+          <pre className="code-content plan-code text-green-glow">{displayTunedPlan || '튜닝 후 실행계획은 아직 없습니다.\n아래 버튼을 누르면 튜닝 SQL을 실행하지 않고 EXPLAIN PLAN으로 예상 계획만 확인할 수 있습니다.'}</pre>
+
+          {selectedSqlItem && item.tunedSql && !item.tunedPlan && (
+            <div className="explain-actions">
+              <button
+                type="button"
+                className="action-btn test-btn"
+                onClick={handleExplain}
+                disabled={!isConnected || isExplaining}
+              >
+                {isExplaining
+                  ? <RefreshCw className="icon animate-spin" />
+                  : <Eye className="icon text-cyan" />}
+                <span>{isExplaining ? '예상 계획 생성 중...' : '실행 없이 예상 계획 보기 (EXPLAIN PLAN)'}</span>
+              </button>
+              {!isConnected && <span className="field-desc">DB 연결 후 사용할 수 있습니다.</span>}
+              {explainError && (
+                <span className="explain-error">
+                  <AlertTriangle className="icon text-red" />
+                  {explainError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

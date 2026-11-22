@@ -121,6 +121,52 @@ export function calculateBufferCacheHitRatio(stats) {
   return Number(Math.min(100, Math.max(0, ratio)).toFixed(2));
 }
 
+/**
+ * EXPLAIN PLAN 대상 SQL 정리: 끝의 세미콜론을 제거하고 비어 있으면 거부한다.
+ * SELECT 전용 여부는 호출자가 학습 채점기와 같은 가드(isSelectOnly)로 판정한다.
+ */
+export function cleanExplainTargetSql(sql) {
+  const cleaned = String(sql || '').trim().replace(/;+\s*$/, '').trim();
+  if (!cleaned) throw new ValidationError('실행계획을 확인할 SQL이 비어 있습니다.');
+  if (cleaned.length > 100_000) throw new ValidationError('SQL이 너무 깁니다. (100,000자 이하)');
+  return cleaned;
+}
+
+/** statement_id는 서버가 만든 값만 허용한다 (SQL에 그대로 들어가기 때문). */
+export function assertStatementId(statementId) {
+  if (!/^[A-Z0-9_]{1,30}$/.test(String(statementId || ''))) {
+    throw new ValidationError('statement_id 형식이 올바르지 않습니다.');
+  }
+  return statementId;
+}
+
+export function buildExplainPlanSql(statementId, sql) {
+  assertStatementId(statementId);
+  return `EXPLAIN PLAN SET STATEMENT_ID = '${statementId}' FOR ${sql}`;
+}
+
+export const EXPLAIN_PLAN_TABLE_SQL = `SELECT PLAN_TABLE_OUTPUT AS "planLine"
+    FROM TABLE(DBMS_XPLAN.DISPLAY_PLAN_TABLE(:statementId, NULL, 'TYPICAL +PREDICATE'))`;
+
+export const EXPLAIN_PLAN_CLEANUP_SQL = 'DELETE FROM PLAN_TABLE WHERE STATEMENT_ID = :statementId';
+
+/** 설명 대상 SQL에 등장하는 이름 바인드(:b1 등) 목록. EXPLAIN 시 더미 바인딩에 쓴다. */
+export function extractBindNames(sql) {
+  const names = new Set();
+  const pattern = /(?<!:):([A-Za-z][A-Za-z0-9_$#]*)/g;
+  let match;
+  while ((match = pattern.exec(String(sql || ''))) !== null) names.add(match[1]);
+  return [...names];
+}
+
+/** DISPLAY_PLAN_TABLE 결과 행들을 실행계획 텍스트로 합친다. */
+export function planRowsToText(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => String(row?.planLine ?? row?.PLAN_TABLE_OUTPUT ?? ''))
+    .join('\n')
+    .trim();
+}
+
 export function sanitizeOracleError(error) {
   const raw = String(error?.message || error || 'Oracle 연결 중 알 수 없는 오류가 발생했습니다.');
   // 연결 문자열이나 비밀번호가 오류 메시지에 섞여도 클라이언트에 그대로 내보내지 않는다.

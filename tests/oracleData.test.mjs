@@ -77,3 +77,18 @@ test('오류 메시지에서 비밀번호 패턴을 숨긴다', () => {
   assert.equal(message.includes('secret'), false);
   assert.match(message, /ORA-01017/);
 });
+
+test('EXPLAIN PLAN 헬퍼: SQL 정리, statement_id 검증, 바인드 추출, 계획 텍스트 조합', async () => {
+  const od = await import('../server/oracleData.mjs');
+  assert.equal(od.cleanExplainTargetSql('  SELECT 1 FROM dual;  '), 'SELECT 1 FROM dual');
+  assert.throws(() => od.cleanExplainTargetSql('   '), od.ValidationError);
+  assert.equal(
+    od.buildExplainPlanSql('OTUNE_ABC123', 'SELECT 1 FROM dual'),
+    "EXPLAIN PLAN SET STATEMENT_ID = 'OTUNE_ABC123' FOR SELECT 1 FROM dual",
+  );
+  assert.throws(() => od.buildExplainPlanSql("x'; DROP", 'SELECT 1 FROM dual'), od.ValidationError);
+  assert.deepEqual(od.extractBindNames('SELECT * FROM emp WHERE job = :b1 AND sal > :b2 AND x = :b1'), ['b1', 'b2']);
+  assert.deepEqual(od.extractBindNames('SELECT 1 FROM dual'), []);
+  assert.equal(od.planRowsToText([{ planLine: 'line1' }, { planLine: 'line2' }]), 'line1\nline2');
+  assert.equal(od.planRowsToText([]), '');
+});

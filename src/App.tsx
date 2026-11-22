@@ -164,8 +164,9 @@ export function App() {
         )}
 
         {activeTab === 'diff' && (
-          <PlanDiffViewer 
-            selectedSqlItem={selectedSqlItem} 
+          <PlanDiffViewer
+            selectedSqlItem={selectedSqlItem}
+            dbConfig={dbConfig}
           />
         )}
 

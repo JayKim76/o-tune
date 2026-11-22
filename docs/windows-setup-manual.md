@@ -180,6 +180,8 @@ GRANT CREATE SESSION, SELECT_CATALOG_ROLE TO otune_mon;
 
 - [ ] http://127.0.0.1:8787/oracle-api/health 접속 시 `ok: true` 가 보인다
 - [ ] DB 연결 테스트 성공 후 대시보드에 실데이터가 표시된다
+- [ ] Plan Diff 화면에서 **실행 없이 예상 계획 보기 (EXPLAIN PLAN)** 를 누르면
+      튜닝 SQL을 실행하지 않고 만든 예상 실행계획이 표시된다
 - [ ] **AI Rule Engine 진단** 버튼 결과가 즉시 나온다
 - [ ] (LM 사용 시) **LM Studio 로컬 AI 튜닝 실행** 결과가 나오거나,
       실패 시 원인이 문장으로 표시된다

@@ -3,23 +3,32 @@
 // 역할:
 // - 브라우저는 Oracle에 직접 접속할 수 없으므로, 같은 PC에서 실행되는 이 에이전트가 대신 접속한다.
 // - 127.0.0.1에만 바인딩하고, 고정된 조회 쿼리만 실행한다 (임의 SQL 실행 API는 제공하지 않음).
+//   유일한 예외는 EXPLAIN PLAN 전용 엔드포인트로, SELECT 문장만 받아 실행 없이 예상 계획만 만든다.
 // - DB 비밀번호는 요청 처리 중에만 사용하고 저장·기록하지 않는다.
 
 import { createServer } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import oracledb from 'oracledb';
 import {
+  EXPLAIN_PLAN_CLEANUP_SQL,
+  EXPLAIN_PLAN_TABLE_SQL,
   ValidationError,
   buildConnectString,
+  buildExplainPlanSql,
   calculateBufferCacheHitRatio,
+  cleanExplainTargetSql,
   clampLimit,
+  extractBindNames,
   mapTopSqlRows,
+  planRowsToText,
   sanitizeOracleError,
   toNumber,
   validateConnectionConfig,
 } from './oracleData.mjs';
+import { isSelectOnly } from '../training/scorer/scorer.mjs';
 import {
   LmError,
   diagnoseWithLmStudio,
@@ -241,6 +250,46 @@ async function fetchDashboard(config, limit) {
   });
 }
 
+/**
+ * 튜닝 SQL을 실제로 실행하지 않고 EXPLAIN PLAN으로 예상 실행계획만 만든다.
+ * - SELECT 전용 가드(학습 채점기와 동일)를 통과한 문장만 받는다.
+ * - 바인드 변수는 값을 알 수 없으므로 SQL*Plus처럼 미결정(타입 없는) 상태로 설명한다.
+ *   더미로 NULL 문자열 바인드를 채워 ORA-01008을 피한다.
+ * - 만든 계획 행은 같은 세션에서 지운다. PLAN_TABLE은 보통 세션 전용 임시 테이블이라
+ *   지우지 않아도 세션이 끝나면 사라진다.
+ */
+async function explainPlan(config, rawSql) {
+  const sql = cleanExplainTargetSql(rawSql);
+  if (!isSelectOnly(sql)) {
+    const err = new Error('EXPLAIN PLAN은 SELECT 문장만 지원합니다. DML/DDL이나 다중 문장은 실행계획을 만들 수 없습니다.');
+    err.status = 400;
+    throw err;
+  }
+  const statementId = `OTUNE_${randomBytes(6).toString('hex').toUpperCase()}`;
+  return withConnection(config, async (connection) => {
+    const binds = {};
+    for (const name of extractBindNames(sql)) {
+      binds[name] = { val: null, type: oracledb.STRING, dir: oracledb.BIND_IN };
+    }
+    try {
+      await connection.execute(buildExplainPlanSql(statementId, sql), binds);
+      const planRows = await executeRows(connection, EXPLAIN_PLAN_TABLE_SQL, { statementId });
+      const planText = planRowsToText(planRows);
+      if (!planText) {
+        const err = new Error('EXPLAIN PLAN 결과를 읽지 못했습니다. PLAN_TABLE 접근 권한을 확인해 주세요.');
+        err.status = 502;
+        throw err;
+      }
+      return { planText, statementId, estimated: true };
+    } finally {
+      try {
+        await connection.execute(EXPLAIN_PLAN_CLEANUP_SQL, { statementId });
+        await connection.commit();
+      } catch { /* 정리 실패는 결과에 영향을 주지 않는다 */ }
+    }
+  });
+}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -312,6 +361,15 @@ const server = createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const config = validateConnectionConfig(body.connection);
       const result = await fetchDashboard(config, clampLimit(body.limit, 10));
+      sendJson(req, res, 200, result);
+      return;
+    }
+
+    if (url.pathname === '/oracle-api/explain-plan' && req.method === 'POST') {
+      guardRequest(req, { requireToken: true });
+      const body = await readJsonBody(req, 128 * 1024);
+      const config = validateConnectionConfig(body.connection ?? body);
+      const result = await explainPlan(config, body.sql);
       sendJson(req, res, 200, result);
       return;
     }

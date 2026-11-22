@@ -74,10 +74,19 @@ function enrichRow(row: OracleTopSqlRow): TopSqlItem {
     normalizedSql: normalized.normalizedSql,
     antiPatterns,
     tunedSql: hints.length > 0 ? generateTunedSql(normalized.normalizedSql, hints) : undefined,
-    // 튜닝 후 실행계획은 실제로 실행해 보기 전에는 알 수 없으므로 만들지 않는다.
+    // 튜닝 후 실행계획은 여기서 만들지 않는다. Plan Diff 화면에서 EXPLAIN PLAN으로
+    // 실행 없이 만든 예상 계획을 별도 조회한다 (실행한 실제 계획과는 구분 표기).
     tunedPlan: undefined,
     executionPlan: plan || '백엔드에서 실행계획을 가져오지 못했습니다. DBMS_XPLAN.DISPLAY_CURSOR 권한과 커서 상태를 확인하세요.',
   };
+}
+
+/** 튜닝 SQL을 실행하지 않고 EXPLAIN PLAN으로 예상 실행계획만 받아 온다. */
+export async function fetchExplainPlan(
+  config: OracleConnectionConfig,
+  sql: string,
+): Promise<{ planText: string; statementId: string; estimated: boolean }> {
+  return postJson('/oracle-api/explain-plan', config, { sql });
 }
 
 export async function fetchLiveDashboard(
