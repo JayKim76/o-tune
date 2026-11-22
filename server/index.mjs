@@ -25,10 +25,11 @@ import {
   mapTopSqlRows,
   planRowsToText,
   sanitizeOracleError,
+  sanitizeSqlForExplain,
   toNumber,
   validateConnectionConfig,
 } from './oracleData.mjs';
-import { isSelectOnly } from '../training/scorer/scorer.mjs';
+import { isSelectOnly, stripForGuard } from '../training/scorer/scorer.mjs';
 import {
   LmError,
   diagnoseWithLmStudio,
@@ -267,20 +268,44 @@ async function explainPlan(config, rawSql) {
   }
   const statementId = `OTUNE_${randomBytes(6).toString('hex').toUpperCase()}`;
   return withConnection(config, async (connection) => {
-    const binds = {};
-    for (const name of extractBindNames(sql)) {
-      binds[name] = { val: null, type: oracledb.STRING, dir: oracledb.BIND_IN };
-    }
-    try {
-      await connection.execute(buildExplainPlanSql(statementId, sql), binds);
+    const runExplain = async (targetSql) => {
+      // 바인드 추출은 리터럴·주석을 제거한 텍스트에서 한다 ('12:30' 같은 리터럴 오인 방지).
+      const binds = {};
+      for (const name of extractBindNames(stripForGuard(targetSql))) {
+        binds[name] = { val: null, type: oracledb.STRING, dir: oracledb.BIND_IN };
+      }
+      await connection.execute(buildExplainPlanSql(statementId, targetSql), binds);
       const planRows = await executeRows(connection, EXPLAIN_PLAN_TABLE_SQL, { statementId });
-      const planText = planRowsToText(planRows);
+      return planRowsToText(planRows);
+    };
+    try {
+      let planText;
+      try {
+        planText = await runExplain(sql);
+      } catch (firstError) {
+        // ORA-00921(문장 끝 예상 밖 종료)·ORA-00911은 끝에 붙은 세미콜론이나
+        // 주석이 파서를 방해할 때 자주 난다. 주석 제거본으로 한 번만 다시 시도한다.
+        if (!/ORA-00921|ORA-00911/.test(String(firstError?.message || ''))) throw firstError;
+        const sanitized = sanitizeSqlForExplain(sql);
+        if (sanitized === sql) throw firstError;
+        console.warn(`[o-tune] EXPLAIN PLAN 파싱 오류로 주석 제거본 재시도: ${sanitizeOracleError(firstError)}`);
+        // 첫 시도가 계획 행을 남겼을 수 있어 같은 statement_id 행을 비우고 재시도한다.
+        try { await connection.execute(EXPLAIN_PLAN_CLEANUP_SQL, { statementId }); } catch { /* 무시 */ }
+        planText = await runExplain(sanitized);
+      }
       if (!planText) {
         const err = new Error('EXPLAIN PLAN 결과를 읽지 못했습니다. PLAN_TABLE 접근 권한을 확인해 주세요.');
         err.status = 502;
         throw err;
       }
       return { planText, statementId, estimated: true };
+    } catch (error) {
+      // 어느 단계에서 실패했는지와 대상 SQL의 길이·머리를 함께 남겨 원인 확인을 돕는다.
+      if (error?.status !== 400 && error?.status !== 502) {
+        const preview = sql.slice(0, 120).replace(/\s+/g, ' ');
+        error.message = `${error.message} [대상 SQL ${sql.length}자: ${preview}...]`;
+      }
+      throw error;
     } finally {
       try {
         await connection.execute(EXPLAIN_PLAN_CLEANUP_SQL, { statementId });

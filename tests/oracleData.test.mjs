@@ -92,3 +92,16 @@ test('EXPLAIN PLAN 헬퍼: SQL 정리, statement_id 검증, 바인드 추출, �
   assert.equal(od.planRowsToText([{ planLine: 'line1' }, { planLine: 'line2' }]), 'line1\nline2');
   assert.equal(od.planRowsToText([]), '');
 });
+
+test('EXPLAIN 전처리 강화: 끝 세미콜론·주석 제거, 주석 정제, 숫자 바인드', async () => {
+  const od = await import('../server/oracleData.mjs');
+  assert.equal(od.cleanExplainTargetSql('SELECT 1 FROM dual; -- 끝 주석'), 'SELECT 1 FROM dual');
+  assert.equal(od.cleanExplainTargetSql('SELECT 1 FROM dual /* 메모 */;'), 'SELECT 1 FROM dual');
+  assert.equal(od.cleanExplainTargetSql('SELECT 1 FROM dual;;'), 'SELECT 1 FROM dual');
+  const sanitized = od.sanitizeSqlForExplain('SELECT /*+ FULL(e) */ * FROM emp e -- 대상 테이블\nWHERE e.job = :b1 /* 이유 */');
+  assert.ok(sanitized.includes('/*+ FULL(e) */'));
+  assert.ok(!sanitized.includes('대상 테이블'));
+  assert.ok(!sanitized.includes('이유'));
+  assert.ok(sanitized.endsWith(':b1'));
+  assert.deepEqual(od.extractBindNames('SELECT * FROM t WHERE a = :1 AND b = :b2'), ['1', 'b2']);
+});

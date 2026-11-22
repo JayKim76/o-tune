@@ -122,14 +122,36 @@ export function calculateBufferCacheHitRatio(stats) {
 }
 
 /**
- * EXPLAIN PLAN 대상 SQL 정리: 끝의 세미콜론을 제거하고 비어 있으면 거부한다.
+ * EXPLAIN PLAN 대상 SQL 정리.
+ * 끝에 붙은 세미콜론과 주석은 드라이버/파서 조합에 따라 ORA-00921
+ * (unexpected end of SQL command)의 원인이 되므로 반복해서 걷어 낸다.
  * SELECT 전용 여부는 호출자가 학습 채점기와 같은 가드(isSelectOnly)로 판정한다.
  */
 export function cleanExplainTargetSql(sql) {
-  const cleaned = String(sql || '').trim().replace(/;+\s*$/, '').trim();
+  let cleaned = String(sql || '').trim();
+  for (let i = 0; i < 5; i += 1) {
+    const next = cleaned
+      .replace(/;+\s*$/, '') // 끝 세미콜론
+      .replace(/--[^\n]*$/, '') // 끝에 붙은 한 줄 주석 (개행 없이 끝나는 경우)
+      .replace(/\/\*(?!\+)[\s\S]*?\*\/\s*$/, '') // 끝에 붙은 블록 주석 (힌트 제외)
+      .trim();
+    if (next === cleaned) break;
+    cleaned = next;
+  }
   if (!cleaned) throw new ValidationError('실행계획을 확인할 SQL이 비어 있습니다.');
   if (cleaned.length > 100_000) throw new ValidationError('SQL이 너무 깁니다. (100,000자 이하)');
   return cleaned;
+}
+
+/**
+ * EXPLAIN 재시도용 정제본: 한 줄 주석과 힌트가 아닌 블록 주석을 모두 제거한다.
+ * 주석이 파싱을 방해하는 경우(ORA-00921 등)에만 쓰는 폴백이라 힌트(/*+ *\/)는 보존한다.
+ */
+export function sanitizeSqlForExplain(sql) {
+  const withoutComments = String(sql || '')
+    .replace(/\/\*(?!\+)[\s\S]*?\*\//g, ' ') // 힌트(/*+ */)가 아닌 블록 주석 제거
+    .replace(/--[^\n]*/g, ' '); // 한 줄 주석 제거
+  return cleanExplainTargetSql(withoutComments);
 }
 
 /** statement_id는 서버가 만든 값만 허용한다 (SQL에 그대로 들어가기 때문). */
@@ -150,10 +172,14 @@ export const EXPLAIN_PLAN_TABLE_SQL = `SELECT PLAN_TABLE_OUTPUT AS "planLine"
 
 export const EXPLAIN_PLAN_CLEANUP_SQL = 'DELETE FROM PLAN_TABLE WHERE STATEMENT_ID = :statementId';
 
-/** 설명 대상 SQL에 등장하는 이름 바인드(:b1 등) 목록. EXPLAIN 시 더미 바인딩에 쓴다. */
+/**
+ * 설명 대상 SQL에 등장하는 바인드(:b1, :1 등) 목록. EXPLAIN 시 더미 바인딩에 쓴다.
+ * 리터럴 속 콜론을 바인드로 오인하지 않도록, 호출자는 리터럴·주석을 제거한
+ * 텍스트(stripForGuard 결과)를 넘기는 것이 원칙이다.
+ */
 export function extractBindNames(sql) {
   const names = new Set();
-  const pattern = /(?<!:):([A-Za-z][A-Za-z0-9_$#]*)/g;
+  const pattern = /(?<!:):([A-Za-z][A-Za-z0-9_$#]*|\d+)/g;
   let match;
   while ((match = pattern.exec(String(sql || ''))) !== null) names.add(match[1]);
   return [...names];
