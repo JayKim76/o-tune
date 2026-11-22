@@ -26,12 +26,13 @@ export function App() {
   const [isLmModalOpen, setIsLmModalOpen] = useState<boolean>(false);
 
   const [dbConfig, setDbConfig] = useState<OracleConnectionConfig>({
-    host: '192.168.1.100',
+    host: 'localhost',
     port: 1521,
     serviceName: 'ORCL',
     username: 'SYSTEM',
-    useDrcp: true,
-    // 실제 DB 연결 기능이 없으므로 연결된 것처럼 표시하지 않는다.
+    // DRCP는 DB 서버에 별도 설정이 있어야 동작하므로 기본값은 끔이다.
+    // 켜 둔 채로 저장하면 DRCP 미설정 DB에서 연결 자체가 실패한다.
+    useDrcp: false,
     status: 'DISCONNECTED',
     lastConnectedAt: undefined
   });

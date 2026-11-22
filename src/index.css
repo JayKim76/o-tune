@@ -1779,3 +1779,37 @@ body {
 }
 
 
+
+/* DB 연결 모달: 필드 설명과 비밀번호 보기 토글 */
+.field-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.password-wrap {
+  position: relative;
+  display: flex;
+}
+
+.password-wrap .form-input {
+  flex: 1;
+  padding-right: 2.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+}
+
+.password-toggle:hover {
+  color: #fff;
+}
