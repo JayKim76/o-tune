@@ -171,7 +171,7 @@ WHERE e.deptno = d.deptno
           <RefreshCw className="loading-spinner icon text-amber animate-spin" />
           <h4>LM Studio 로컬 AI 모델이 SQL 및 실행계획을 분석하고 있습니다...</h4>
           <p className="loading-desc">
-            모델: <strong className="text-cyan">{lmConfig.activeModel || 'qwen/qwen3.5-9b'}</strong> | 서버: {lmConfig.serverUrl}
+            모델: <strong className="text-cyan">{lmConfig.activeModel || '서버가 선택한 로드 모델'}</strong> | 서버: {lmConfig.serverUrl}
           </p>
           <div className="loading-bar"><div className="loading-bar-inner"></div></div>
         </div>
@@ -188,23 +188,13 @@ WHERE e.deptno = d.deptno
       {/* 1) LM Studio 로컬 AI 튜닝 결과 리포트 */}
       {activeEngine === 'LM_STUDIO' && lmResult && !isLmAnalyzing && (
         <div className="results-container animate-fade-in">
-          {lmResult.isFallback && (
-            <div className="status-banner error animate-fade-in">
-              <AlertTriangle className="icon text-red" />
-              <span>LM Studio 폴백 예시 결과입니다. {lmResult.fallbackReason || ''} 실제 AI 진단이 아니므로 튜닝 판단에 사용하지 마세요.</span>
-            </div>
-          )}
           <div className="results-header lm-header">
             <h3 className="results-title">
               <Bot className="icon text-amber" />
-              <span>{lmResult.isFallback ? 'LM Studio 폴백 예시 결과' : `LM Studio 로컬 AI 심층 튜닝 보고서 (${lmConfig.activeModel || 'Local AI'})`}</span>
+              <span>{`LM Studio 로컬 AI 심층 튜닝 보고서 (${lmResult.modelUsed || lmConfig.activeModel || 'Local AI'})`}</span>
             </h3>
             <div className="benefit-badge highlight-gold">
-              {lmResult.isFallback ? (
-                <span>실제 진단 아님 (예시)</span>
-              ) : (
-                <span>예상 개선율 (AI 추정): <strong>{lmResult.benefitRatioPercent}%</strong></span>
-              )}
+              <span>예상 개선율 (AI 추정): <strong>{lmResult.benefitRatioPercent}%</strong></span>
             </div>
           </div>
 

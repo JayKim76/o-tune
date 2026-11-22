@@ -59,7 +59,9 @@ npm run server   # http://127.0.0.1:8787/ 에서 화면과 API 제공
 - **Top SQL 대시보드** — 실데이터 연결 시 `V$SQLSTATS` 기반 목록과 실측 KPI,
   미연결 시 샘플 데이터임을 명시하고 표시
 - **SQL 진단** — 규칙 엔진(`src/utils/sqlParser.ts`: SQL 정규화·안티패턴 탐지·힌트 병합)과
-  LM Studio 로컬 AI(`src/utils/lmStudioApi.ts`, OpenAI 호환 API `http://localhost:1234`) 진단
+  LM Studio 로컬 AI 진단. 브라우저가 LM Studio를 직접 부르지 않고 로컬 에이전트
+  프록시(`server/lmStudio.mjs`)를 경유해 CORS와 운영 모드 문제를 피하고,
+  실제 로드된 모델로만 호출한다
 - **Plan Diff** — 선택한 SQL의 실행계획에서 Cost·Time을 직접 파싱해 비교.
   튜닝 후 실행계획은 실제 실행 전에는 표시하지 않음
 - **학습 루프 / 튜닝 툴킷** — 튜닝 방법론 설명과 실무 진단 쿼리 모음
@@ -74,8 +76,8 @@ npm run lint    # oxlint
 
 ## 현재 상태 (중요)
 
-- LM Studio에 연결하지 못하면 폴백 **예시** 결과가 표시됩니다. 화면 상단 경고 배너로 구분되며,
-  실제 AI 진단이 아니므로 튜닝 판단에 사용하면 안 됩니다.
+- LM Studio 진단이 실패하면 예시 결과를 만들지 않고 실패 이유를 표시한 뒤
+  규칙 엔진 진단으로 자동 전환됩니다. LM Studio 앱에서 모델 로드와 Local Server
+  실행이 필요하고, 에이전트(`npm run server`)가 함께 떠 있어야 합니다.
 - 규칙 엔진의 튜닝 후 수치는 실행계획 Time 기반 **추정**이며 실측이 아닙니다.
-- `V$SQLSTATS`의 SQL_TEXT는 앞부분 1,000자까지만 제공되므로, 긴 SQL의 정밀 진단은
-  진단 화면에 전체 SQL을 직접 붙여 넣어 주세요.
+- Top SQL은 `V$SQLSTATS`의 SQL_FULLTEXT 전문을 조회하므로 긴 SQL도 잘리지 않습니다.

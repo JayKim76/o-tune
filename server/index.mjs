@@ -20,6 +20,12 @@ import {
   toNumber,
   validateConnectionConfig,
 } from './oracleData.mjs';
+import {
+  LmError,
+  diagnoseWithLmStudio,
+  fetchLmModels,
+  normalizeLmServerUrl,
+} from './lmStudio.mjs';
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 oracledb.autoCommit = false;
@@ -128,7 +134,7 @@ function guardRequest(req, { requireToken = false } = {}) {
   }
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = MAX_BODY_BYTES) {
   if (!String(req.headers['content-type'] || '').includes('application/json')) {
     const err = new Error('Content-Type은 application/json이어야 합니다.');
     err.status = 415;
@@ -138,7 +144,7 @@ async function readJsonBody(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) {
+    if (size > maxBytes) {
       const err = new Error('요청 본문이 너무 큽니다.');
       err.status = 413;
       throw err;
@@ -310,6 +316,45 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // LM Studio 상태: 에이전트가 서버 쪽에서 조회한다 (브라우저 CORS와 무관).
+    if (url.pathname === '/oracle-api/lm-status' && req.method === 'GET') {
+      guardRequest(req);
+      const baseUrl = normalizeLmServerUrl(url.searchParams.get('serverUrl') || undefined);
+      try {
+        const models = await fetchLmModels(baseUrl);
+        sendJson(req, res, 200, { ok: true, isOnline: true, models, serverUrl: baseUrl });
+      } catch (error) {
+        if (error instanceof LmError) {
+          sendJson(req, res, 200, { ok: true, isOnline: false, models: [], serverUrl: baseUrl, error: error.message, code: error.code });
+          return;
+        }
+        throw error;
+      }
+      return;
+    }
+
+    // LM Studio 진단 프록시: 브라우저가 localhost:1234를 직접 부르지 않는다.
+    // 토큰 대신 Origin/Host 가드로 보호한다 (health와 같은 수준).
+    if (url.pathname === '/oracle-api/lm-diagnose' && req.method === 'POST') {
+      guardRequest(req);
+      const body = await readJsonBody(req, 256 * 1024);
+      const rawSql = typeof body.sql === 'string' ? body.sql : '';
+      const executionPlanText = typeof body.executionPlan === 'string' ? body.executionPlan : '';
+      if (!rawSql.trim()) {
+        const err = new Error('진단할 SQL이 비어 있습니다.');
+        err.status = 400;
+        throw err;
+      }
+      const result = await diagnoseWithLmStudio({
+        serverUrl: typeof body.serverUrl === 'string' ? body.serverUrl : undefined,
+        model: typeof body.model === 'string' ? body.model : undefined,
+        rawSql,
+        executionPlanText,
+      });
+      sendJson(req, res, 200, result);
+      return;
+    }
+
     if (url.pathname.startsWith('/oracle-api')) {
       sendJson(req, res, 404, { error: '알 수 없는 API 경로입니다.' });
       return;
@@ -322,6 +367,11 @@ const server = createServer(async (req, res) => {
 
     sendJson(req, res, 405, { error: '지원하지 않는 메서드입니다.' });
   } catch (error) {
+    if (error instanceof LmError) {
+      // LM 오류 메시지는 사용자에게 그대로 보여 줘도 되는 안내 문구다.
+      sendJson(req, res, error.status, { error: error.message, code: error.code });
+      return;
+    }
     const status = error instanceof ValidationError
       ? error.status
       : (Number.isInteger(error?.status) ? error.status : 502);

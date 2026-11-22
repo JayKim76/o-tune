@@ -49,7 +49,7 @@ export const LmStudioModal: React.FC<LmStudioModalProps> = ({
   const handleSave = () => {
     onSaveConfig({
       serverUrl,
-      activeModel: activeModel || (availableModels[0] || 'default-model'),
+      activeModel: activeModel || availableModels[0] || '',
       availableModels,
       status,
       lastCheckedAt: new Date().toLocaleTimeString(),

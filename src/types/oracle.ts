@@ -143,9 +143,8 @@ export interface LmStudioDiagnosticResult {
   estimatedCostReduction: string;
   benefitRatioPercent: number;
   rawModelResponse?: string;
-  /** true면 LM Studio 실제 응답이 아니라 폴백(예시) 결과다. 화면에서 반드시 구분 표기할 것. */
-  isFallback?: boolean;
-  fallbackReason?: string;
+  /** 에이전트 프록시가 실제로 호출한 로드 모델 ID */
+  modelUsed?: string;
 }
 
 

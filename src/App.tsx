@@ -54,7 +54,7 @@ export function App() {
           ...prev,
           status: 'ONLINE',
           availableModels: res.models,
-          activeModel: res.models[0] || 'default-model',
+          activeModel: res.models[0] || '',
           lastCheckedAt: new Date().toLocaleTimeString(),
         }));
       } else {
