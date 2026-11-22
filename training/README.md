@@ -42,11 +42,21 @@ node training/scorer/score.mjs --case training/cases/data/case-0001.json --candi
 
 ## 샌드박스 준비 (실행 모드용)
 
-1. Oracle Database Free 컨테이너 등 운영과 분리된 DB를 준비한다.
-2. 조회 전용 계정을 만든다 (채점기는 SELECT만 실행하지만 계정 권한으로도 차단).
-3. 케이스의 `schema_ddl`로 스키마를 만들고 테스트 데이터를 적재한 뒤 통계를 고정한다.
+실측 전 체크리스트. 하나라도 빠지면 채점을 시작하지 않는다.
+
+1. Oracle Database Free 컨테이너 등 운영과 분리된 DB를 준비한다. 운영 계정을 재사용하지 않는다.
+2. 조회 전용 계정을 만든다. 대상 스키마에 SELECT만 부여하고 EXECUTE/CREATE 권한은 주지 않는다.
+   문자열 가드(`scorer.mjs`)는 2차 방어선이고, 계정 권한이 1차 방어선이다.
+3. 가능하면 Resource Manager 등으로 CPU와 실행 시간에 상한을 건다.
+4. 케이스의 `schema_ddl`로 스키마를 만들고 테스트 데이터를 적재한 뒤 통계를 고정한다.
    (데이터 적재 스크립트는 케이스 실측 단계에서 케이스별로 추가한다.)
-4. 위 환경변수를 설정하고 `--mode oracle`로 채점한다.
+5. 위 환경변수를 설정하고 `--mode oracle`로 채점한다. 측정 세션에는
+   `RESULT_CACHE_MODE = MANUAL`이 자동 적용되고, 원본/후보 워밍업 1회를 버린 뒤
+   교차 순서로 측정한다.
+
+보상 규칙 요약 (2026-11-22 개편, 설계 문서 5장): Cost는 보상에서 제외(Buffer Gets 0.7 + elapsed 0.3),
+타임아웃 -0.9, 금지 힌트(`RESULT_CACHE`·`PARALLEL`·`PARALLEL_INDEX`·`DYNAMIC_SAMPLING`)는
+실행 전 차단해 -0.5로 채점한다.
 
 ## 현재 한계 (솔직한 상태)
 

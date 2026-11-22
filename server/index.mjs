@@ -23,6 +23,9 @@ import {
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 oracledb.autoCommit = false;
+// SQL_FULLTEXT는 CLOB이다. Lob 객체가 아니라 문자열로 받아야
+// mapTopSqlRows의 String 변환에서 깨지지 않는다.
+oracledb.fetchAsString = [oracledb.CLOB];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..');
@@ -40,9 +43,11 @@ const TEST_SQL = `
 
 const VERSION_SQL = `SELECT version AS "version" FROM v$instance`;
 
+// sql_text는 앞 1,000자에서 잘리므로 전체 본문인 sql_fulltext(CLOB)를 쓴다.
+// 잘린 SQL을 진단/정규화에 넘기면 깨진 SQL을 튜닝하게 되기 때문이다.
 const TOP_SQL = `
   SELECT st.sql_id AS "sqlId",
-         st.sql_text AS "sqlText",
+         st.sql_fulltext AS "sqlText",
          st.elapsed_time AS "elapsedTimeMicro",
          st.cpu_time AS "cpuTimeMicro",
          st.user_io_wait_time AS "userIoWaitTimeMicro",

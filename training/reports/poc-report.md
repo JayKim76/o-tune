@@ -56,3 +56,17 @@
 
 로드맵 1단계(SFT v1)는 위 실측 검증으로 케이스 품질을 확보한 뒤 착수한다.
 케이스가 추정 지표인 상태로 학습을 시작하면 모델이 추정치의 패턴을 외울 위험이 있다.
+
+## 2026-11-22 보상·격리 개편 (3자 분석 후속)
+
+Gemini·Claude·자체 실측 교차 분석에서 나온 즉시 항목을 반영했다.
+
+- 보상: Cost를 보상에서 제외(Buffer Gets 0.7 + elapsed 0.3, Cost는 진단용만),
+  타임아웃 -0.2 → -0.9
+- 금지 힌트(`RESULT_CACHE`·`PARALLEL`·`PARALLEL_INDEX`·`DYNAMIC_SAMPLING`)는
+  실행 전 차단, verdict `BANNED_HINT`, R = -0.5
+- 가드: `WITH FUNCTION`·`FOR UPDATE` 차단 추가
+- 측정: 세션 `RESULT_CACHE_MODE = MANUAL`, 워밍업 1회 제외, 원본/후보 교차 측정, 중앙값 요약
+- 대시보드: `V$SQLSTATS` 조회를 `sql_text`(1,000자 절단)에서 `sql_fulltext`(CLOB)로 교체
+- 재평가(드라이런 300건): gold 평균 0.8868 / 중앙값 0.994 / 최소 0.1747,
+  copy 평균 0.05, broken 전부 -1, 순서 위반 0건. 테스트 19건 통과.

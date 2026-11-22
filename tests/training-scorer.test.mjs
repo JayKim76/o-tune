@@ -11,7 +11,7 @@ import {
   parseDiagnosis,
   scoreCandidate,
 } from '../training/scorer/scorer.mjs';
-import { median, parsePlanStats } from '../training/scorer/oracleRunner.mjs';
+import { median, parsePlanStats, summarizeMeasures, SANDBOX_SESSION_SQLS } from '../training/scorer/oracleRunner.mjs';
 import { buildCases } from '../training/cases/templates.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -25,6 +25,9 @@ test('SELECT 전용 가드: 허용과 차단을 구분한다', () => {
   assert.equal(isSelectOnly('SELECT 1 FROM dual; DROP TABLE emp'), false);
   assert.equal(isSelectOnly('SELECT * INTO backup FROM emp'), false);
   assert.equal(isSelectOnly('UPDATE emp SET sal = 1'), false);
+  // SELECT 형태의 부수효과 패턴도 차단한다
+  assert.equal(isSelectOnly('WITH FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END; SELECT f FROM dual'), false);
+  assert.equal(isSelectOnly('SELECT * FROM emp FOR UPDATE'), false);
 });
 
 test('힌트 분석: 상충, 개수, 남용을 탐지한다', () => {
@@ -36,6 +39,12 @@ test('힌트 분석: 상충, 개수, 남용을 탐지한다', () => {
   const ok = analyzeHints('SELECT /*+ INDEX(e idx) LEADING(e d) */ * FROM emp e');
   assert.equal(ok.conflict, false);
   assert.equal(ok.count, 2);
+  assert.equal(ok.hasBanned, false);
+  const banned = analyzeHints('SELECT /*+ RESULT_CACHE PARALLEL(e 4) */ * FROM emp e');
+  assert.equal(banned.hasBanned, true);
+  assert.deepEqual(banned.banned, ['RESULT_CACHE', 'PARALLEL']);
+  // OPT_ESTIMATE는 정당한 보정 수단이라 금지 대상이 아니다
+  assert.equal(analyzeHints('SELECT /*+ OPT_ESTIMATE(TABLE s ROWS=100) */ * FROM emp').hasBanned, false);
 });
 
 test('진단 JSON 파싱: tuned_sql이 없으면 무효', () => {
@@ -66,8 +75,23 @@ test('보상: 큰 개선은 1.0, 무개선은 보너스만, 실패는 음수', (
   assert.equal(noImprove.reward, 0.05);
   assert.equal(computeReward({ ...baseInput, status: 'error' }).reward, -1);
   assert.equal(computeReward({ ...baseInput, resultEqual: false }).reward, -1);
-  assert.equal(computeReward({ ...baseInput, status: 'timeout' }).reward, -0.2);
+  assert.equal(computeReward({ ...baseInput, status: 'timeout' }).reward, -0.9);
   assert.equal(computeReward({ ...baseInput, diagnosisValid: false }).reward, -0.5);
+});
+
+test('보상: Cost만 좋아져서는 점수를 받지 못하고, 금지 힌트는 BANNED_HINT다', () => {
+  const costOnly = computeReward({
+    ...baseInput, hasRiskNotes: false,
+    cand: { bufferGets: 1000, cost: 1, elapsedSec: 10 },
+  });
+  assert.equal(costOnly.breakdown.impCost, 0.999);
+  assert.equal(costOnly.reward, 0.05); // 형식 보너스만
+  const banned = computeReward({
+    ...baseInput,
+    hints: { conflict: false, count: 1, abuse: false, hasBanned: true, banned: ['RESULT_CACHE'] },
+  });
+  assert.equal(banned.reward, -0.5);
+  assert.equal(banned.verdict, 'BANNED_HINT');
 });
 
 test('보상: 상충 힌트와 남용 감점이 적용된다', () => {
@@ -108,6 +132,28 @@ test('scoreCandidate: DML은 실행 전에 차단되고, 행 기반 동등성을
   });
   assert.equal(mismatch.verdict, 'RESULT_MISMATCH');
   assert.equal(mismatch.reward, -1);
+
+  // 금지 힌트는 실행 결과와 무관하게 실행 전 단계에서 차단된다
+  const banned = scoreCandidate({
+    caseData,
+    candidate: { diagnosis: { tuned_sql: 'SELECT /*+ RESULT_CACHE */ 1 FROM dual' } },
+    execution: { status: 'ok', resultEqual: true, bufferGets: 1, cost: 1, elapsedSec: 0.1 },
+  });
+  assert.equal(banned.verdict, 'BANNED_HINT');
+  assert.equal(banned.reward, -0.5);
+  assert.deepEqual(banned.bannedHints, ['RESULT_CACHE']);
+});
+
+test('샌드박스 세션 설정과 측정 요약: 결과 캐시를 끄고 중앙값을 쓴다', () => {
+  assert.ok(SANDBOX_SESSION_SQLS.some((s) => /RESULT_CACHE_MODE\s*=\s*MANUAL/i.test(s)));
+  const summary = summarizeMeasures([
+    { status: 'ok', elapsedSec: 3, bufferGets: 300, cost: 30, rows: [[1]] },
+    { status: 'ok', elapsedSec: 1, bufferGets: 100, cost: 10, rows: [[1]] },
+    { status: 'ok', elapsedSec: 2, bufferGets: 200, cost: 20, rows: [[1]] },
+  ]);
+  assert.equal(summary.elapsedSec, 2);
+  assert.equal(summary.bufferGets, 200);
+  assert.equal(summarizeMeasures([{ status: 'error', elapsedSec: 0, bufferGets: 0, cost: 0 }]), null);
 });
 
 test('parsePlanStats: 헤더 위치 기반으로 Buffers 합계와 Cost를 읽는다', () => {
